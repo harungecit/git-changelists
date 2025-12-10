@@ -1,0 +1,432 @@
+{
+  "name": "git-changelists",
+  "displayName": "Git Changelists",
+  "description": "IntelliJ-style changelists for VS Code. Organize your changes into multiple groups and commit them separately.",
+  "version": "1.0.0",
+  "publisher": "harungecit",
+  "author": {
+    "name": "Harun Gecit",
+    "email": "info@harungecit.com",
+    "url": "https://harungecit.dev"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Other"
+  ],
+  "keywords": [
+    "git",
+    "changelists",
+    "changelist",
+    "intellij",
+    "source control",
+    "scm"
+  ],
+  "icon": "resources/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/harungecit/git-changelists"
+  },
+  "homepage": "https://github.com/harungecit/git-changelists#readme",
+  "bugs": {
+    "url": "https://github.com/harungecit/git-changelists/issues"
+  },
+  "activationEvents": [
+    "workspaceContains:.git"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gitChangelists",
+          "title": "Git Changelists",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "gitChangelists": [
+        {
+          "id": "gitChangelistsView",
+          "name": "Changelists",
+          "when": "gitChangelists.enabled",
+          "contextualTitle": "Git Changelists"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "gitChangelist.createChangelist",
+        "title": "Create Changelist",
+        "icon": "$(add)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.deleteChangelist",
+        "title": "Delete Changelist",
+        "icon": "$(trash)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.renameChangelist",
+        "title": "Rename Changelist",
+        "icon": "$(edit)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.shelveFile",
+        "title": "Shelve to Changelist...",
+        "icon": "$(archive)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.unshelveFile",
+        "title": "Restore to Working",
+        "icon": "$(export)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.unshelveAll",
+        "title": "Restore All to Working",
+        "icon": "$(export)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.applyAndStage",
+        "title": "Apply & Stage",
+        "icon": "$(git-commit)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.applyAllAndStage",
+        "title": "Apply All & Stage",
+        "icon": "$(git-commit)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.deleteShelvedFile",
+        "title": "Delete Snapshot",
+        "icon": "$(trash)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.commitChangelist",
+        "title": "Commit Shelved Changelist",
+        "icon": "$(check)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.commitWorkingChanges",
+        "title": "Commit Working Changes",
+        "icon": "$(check)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.refreshAll",
+        "title": "Refresh",
+        "icon": "$(refresh)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.exportChangelists",
+        "title": "Export Changelists",
+        "icon": "$(export)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.importChangelists",
+        "title": "Import Changelists",
+        "icon": "$(import)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.openFile",
+        "title": "Open File",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.openDiff",
+        "title": "Open Diff",
+        "icon": "$(diff)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.previewShelved",
+        "title": "Preview Shelved Changes",
+        "icon": "$(preview)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.revertFile",
+        "title": "Revert Changes",
+        "icon": "$(discard)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.setActiveChangelist",
+        "title": "Set as Active Changelist",
+        "icon": "$(star-full)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.moveToChangelist",
+        "title": "Shelve to Changelist...",
+        "icon": "$(archive)",
+        "category": "Git Changelists"
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "gitChangelist.createChangelist",
+          "group": "navigation@1",
+          "when": "scmProvider == gitChangelists"
+        },
+        {
+          "command": "gitChangelist.refreshAll",
+          "group": "navigation@2",
+          "when": "scmProvider == gitChangelists"
+        },
+        {
+          "command": "gitChangelist.exportChangelists",
+          "group": "1_export@1",
+          "when": "scmProvider == gitChangelists"
+        },
+        {
+          "command": "gitChangelist.importChangelists",
+          "group": "1_export@2",
+          "when": "scmProvider == gitChangelists"
+        }
+      ],
+      "scm/resourceGroup/context": [
+        {
+          "command": "gitChangelist.commitChangelist",
+          "group": "inline@1",
+          "when": "scmProvider == gitChangelists"
+        },
+        {
+          "command": "gitChangelist.setActiveChangelist",
+          "group": "inline@2",
+          "when": "scmProvider == gitChangelists && scmResourceGroup != default"
+        },
+        {
+          "command": "gitChangelist.renameChangelist",
+          "group": "1_modify@1",
+          "when": "scmProvider == gitChangelists"
+        },
+        {
+          "command": "gitChangelist.deleteChangelist",
+          "group": "1_modify@2",
+          "when": "scmProvider == gitChangelists && scmResourceGroup != default"
+        }
+      ],
+      "scm/resourceState/context": [
+        {
+          "command": "gitChangelist.openDiff",
+          "group": "inline@1",
+          "when": "scmProvider == gitChangelists"
+        },
+        {
+          "command": "gitChangelist.revertFile",
+          "group": "inline@2",
+          "when": "scmProvider == gitChangelists"
+        },
+        {
+          "command": "gitChangelist.moveToChangelist",
+          "group": "1_move@1",
+          "when": "scmProvider == gitChangelists"
+        },
+        {
+          "command": "gitChangelist.openFile",
+          "group": "2_open@1",
+          "when": "scmProvider == gitChangelists"
+        },
+        {
+          "command": "gitChangelist.openDiff",
+          "group": "2_open@2",
+          "when": "scmProvider == gitChangelists"
+        },
+        {
+          "command": "gitChangelist.revertFile",
+          "group": "3_revert@1",
+          "when": "scmProvider == gitChangelists"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "gitChangelist.createChangelist",
+          "when": "gitChangelists.enabled"
+        },
+        {
+          "command": "gitChangelist.refreshAll",
+          "when": "gitChangelists.enabled"
+        },
+        {
+          "command": "gitChangelist.exportChangelists",
+          "when": "gitChangelists.enabled"
+        },
+        {
+          "command": "gitChangelist.importChangelists",
+          "when": "gitChangelists.enabled"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "gitChangelist.createChangelist",
+          "when": "view == gitChangelistsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitChangelist.refreshAll",
+          "when": "view == gitChangelistsView",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "gitChangelist.commitChangelist",
+          "when": "view == gitChangelistsView && viewItem =~ /changelist/",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitChangelist.setActiveChangelist",
+          "when": "view == gitChangelistsView && viewItem == changelist",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitChangelist.renameChangelist",
+          "when": "view == gitChangelistsView && viewItem =~ /changelist/",
+          "group": "1_changelist@1"
+        },
+        {
+          "command": "gitChangelist.deleteChangelist",
+          "when": "view == gitChangelistsView && viewItem == changelist",
+          "group": "1_changelist@2"
+        },
+        {
+          "command": "gitChangelist.unshelveAll",
+          "when": "view == gitChangelistsView && viewItem =~ /changelist/",
+          "group": "2_shelve@1"
+        },
+        {
+          "command": "gitChangelist.applyAllAndStage",
+          "when": "view == gitChangelistsView && viewItem =~ /changelist/",
+          "group": "2_shelve@2"
+        },
+        {
+          "command": "gitChangelist.shelveFile",
+          "when": "view == gitChangelistsView && viewItem == working-file",
+          "group": "1_file@1"
+        },
+        {
+          "command": "gitChangelist.openDiff",
+          "when": "view == gitChangelistsView && viewItem == working-file",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitChangelist.revertFile",
+          "when": "view == gitChangelistsView && viewItem == working-file",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitChangelist.openFile",
+          "when": "view == gitChangelistsView && viewItem == working-file",
+          "group": "2_file@1"
+        },
+        {
+          "command": "gitChangelist.applyAndStage",
+          "when": "view == gitChangelistsView && viewItem == shelved-file",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitChangelist.deleteShelvedFile",
+          "when": "view == gitChangelistsView && viewItem == shelved-file",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitChangelist.unshelveFile",
+          "when": "view == gitChangelistsView && viewItem == shelved-file",
+          "group": "1_shelved@1"
+        },
+        {
+          "command": "gitChangelist.applyAndStage",
+          "when": "view == gitChangelistsView && viewItem == shelved-file",
+          "group": "1_shelved@2"
+        },
+        {
+          "command": "gitChangelist.previewShelved",
+          "when": "view == gitChangelistsView && viewItem == shelved-file",
+          "group": "1_shelved@3"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Git Changelists",
+      "properties": {
+        "gitChangelists.defaultChangelistName": {
+          "type": "string",
+          "default": "Default Changelist",
+          "description": "Name of the default changelist"
+        },
+        "gitChangelists.showEmptyChangelists": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show changelists even when they have no files"
+        },
+        "gitChangelists.autoRefreshOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh changelists when files are saved"
+        },
+        "gitChangelists.confirmBeforeCommit": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show confirmation dialog before committing a changelist"
+        },
+        "gitChangelists.confirmBeforeRevert": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show confirmation dialog before reverting changes"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "gitChangelist.createChangelist",
+        "key": "ctrl+shift+n",
+        "mac": "cmd+shift+n",
+        "when": "gitChangelists.enabled"
+      },
+      {
+        "command": "gitChangelist.moveToChangelist",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m",
+        "when": "gitChangelists.enabled && scmResourceState"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.config.js",
+    "watch": "node esbuild.config.js --watch",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "esbuild": "^0.19.8",
+    "eslint": "^8.55.0",
+    "typescript": "^5.3.2",
+    "@vscode/vsce": "^2.22.0"
+  },
+  "dependencies": {
+    "simple-git": "^3.21.0"
+  }
+}
