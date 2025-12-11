@@ -1,120 +1,162 @@
 # Git Changelists
 
-IntelliJ-style changelists for VS Code. Save snapshots of your changes into multiple groups and switch between versions easily.
+<p align="center">
+  <img src="resources/icon.png" alt="Git Changelists Logo" width="128" height="128">
+</p>
 
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/harungecit.git-changelists)](https://marketplace.visualstudio.com/items?itemName=harungecit.git-changelists)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<p align="center">
+  <strong>IntelliJ-style changelists for VS Code</strong><br>
+  Save snapshots of your changes, switch between versions, and commit selectively.
+</p>
+
+<p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=harungecit.git-changelists">
+    <img src="https://img.shields.io/visual-studio-marketplace/v/harungecit.git-changelists?style=flat-square&label=VS%20Code%20Marketplace" alt="VS Code Marketplace">
+  </a>
+  <a href="https://github.com/harungecit/git-changelists/releases">
+    <img src="https://img.shields.io/github/v/release/harungecit/git-changelists?style=flat-square&label=GitHub%20Release" alt="GitHub Release">
+  </a>
+  <a href="https://www.apache.org/licenses/LICENSE-2.0">
+    <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square" alt="License: Apache 2.0">
+  </a>
+</p>
+
+---
 
 ## Features
 
-- **Snapshot System**: Save the current state of any file as a snapshot
-- **Multiple Versions**: Keep different versions of the same file in different changelists
-- **Non-Destructive**: Saving a snapshot doesn't revert your file - keep working!
-- **Diff View**: Click any snapshot to see differences from HEAD
-- **Apply & Stage**: Apply a snapshot and stage it for commit in one click
-- **Independent Snapshots**: Each snapshot stores full content, not diffs - no corruption
-- **Export/Import**: Save and restore your changelists
+| Feature | Description |
+|---------|-------------|
+| **Snapshot System** | Save the current state of any file without reverting it |
+| **Multiple Versions** | Keep different versions of the same file in different changelists |
+| **Non-Destructive** | Your working file stays intact - keep editing after saving a snapshot |
+| **Diff Preview** | Click any snapshot to see a side-by-side diff with HEAD |
+| **Apply & Stage** | Apply a snapshot and stage it for commit in one click |
+| **Independent Storage** | Each snapshot stores full content, not diffs - zero corruption risk |
+| **Badge Counter** | Activity Bar icon shows total snapshot count |
+| **Smart Naming** | Auto-increment suggestions when creating changelists (v1 → v2) |
+| **AI Integration** | Add snapshots to VS Code Chat or access via CLI tools |
 
 ## Installation
 
-### From VSIX (Local)
+### VS Code Marketplace
+1. Open VS Code
+2. Go to Extensions (`Ctrl+Shift+X`)
+3. Search for **"Git Changelists"**
+4. Click **Install**
+
+### GitHub Releases
+1. Download the latest `.vsix` file from [GitHub Releases](https://github.com/harungecit/git-changelists/releases)
+2. Install via command line:
 ```bash
 code --install-extension git-changelists-1.0.0.vsix
 ```
 
-### From Source
-```bash
-git clone https://github.com/user/git-changelists.git
-cd git-changelists
-npm install
-npm run build
-npx vsce package
-code --install-extension git-changelists-1.0.0.vsix
-```
+## Quick Start
 
-## Usage
+1. **Make changes** to your files as usual
+2. **Open Git Changelists** panel from the Activity Bar (left sidebar)
+3. **Right-click** a file under "Working Changes"
+4. **Select "Shelve to Changelist..."** and choose a changelist
+5. **Continue editing** - your file stays as-is!
 
-### Quick Start
+## Commands
 
-1. Make changes to a file
-2. Click the **Git Changelists** icon in the Activity Bar (left sidebar)
-3. Right-click on the file under "Working Changes"
-4. Select **"Shelve to Changelist..."**
-5. Choose or create a changelist
+| Command | Description | Shortcut |
+|---------|-------------|----------|
+| Create Changelist | Create a new changelist group | `Ctrl+Shift+N` |
+| Shelve to Changelist | Save current file state as snapshot | `Ctrl+Shift+M` |
+| Restore to Working | Replace working file with snapshot | - |
+| Apply & Stage | Apply snapshot and stage for commit | - |
+| Apply All & Stage | Apply all snapshots from changelist | - |
+| Delete Snapshot | Remove a saved snapshot | - |
+| Add to Chat | Add file/snapshot to VS Code Chat | - |
+| Preview | View diff between HEAD and snapshot | Click on snapshot |
 
-Your snapshot is saved! The file stays as-is so you can continue working.
-
-### Commands
-
-| Action | Description |
-|--------|-------------|
-| **Save to Changelist** | Save current file state as a snapshot |
-| **Restore to Working** | Replace working file with snapshot content |
-| **Apply & Stage** | Apply snapshot AND stage for commit |
-| **Apply All & Stage** | Apply all snapshots in a changelist |
-| **Delete Snapshot** | Remove a snapshot |
-| **Preview (Click)** | View diff between HEAD and snapshot |
-
-### Workflow Example
+## Workflow Example
 
 ```
-1. Edit config.json (v1 → v2)
-2. Save to "Feature A" changelist     → Snapshot of v2 saved
-3. Continue editing (v2 → v3)
-4. Save to "Feature B" changelist     → Snapshot of v3 saved
-5. Decide v2 is correct
-6. Click "Apply & Stage" on Feature A → File becomes v2, staged for commit
-7. Commit!
+Working on a feature and need to try different approaches?
+
+1. Edit config.json (original → version A)
+2. Save to "Approach A" changelist        ← Snapshot saved, file unchanged
+3. Continue editing (version A → version B)
+4. Save to "Approach B" changelist        ← Another snapshot saved
+5. Compare both approaches by clicking each snapshot
+6. Decide version A is better
+7. Click "Apply & Stage" on Approach A    ← File restored & staged
+8. Commit!
 ```
 
-### Keyboard Shortcuts
+## Smart Changelist Naming
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+Shift+N` | Create new changelist |
-| `Ctrl+Shift+M` | Save file to changelist |
+When creating a new changelist, the extension suggests the next name automatically:
 
-## Configuration
+| Existing | Suggestion |
+|----------|------------|
+| (none) | `v1` |
+| `v1` | `v2` |
+| `version 1` | `version 2` |
+| `version_1` | `version_2` |
+| `feature-3` | `feature-4` |
+
+Just press **Enter** to accept or type your own name.
+
+## AI/CLI Tool Integration
+
+### Add to Chat
+Right-click any snapshot or working file and select **"Add to Chat"** to add it to VS Code's Chat panel (works with GitHub Copilot and other chat extensions).
+
+### CLI Tool Access
+Enable `saveSnapshotsToFile` setting to save snapshots as real files in `.gitchangelists/` folder. This allows CLI-based AI tools like **Claude Code**, **Gemini Code**, etc. to access your snapshots directly.
+
+```
+.gitchangelists/
+├── v1/
+│   └── config.json
+├── v2/
+│   └── config.json
+└── .gitignore
+```
+
+## Settings
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `gitChangelists.defaultChangelistName` | Name for default changelist | "Default Changelist" |
-| `gitChangelists.showEmptyChangelists` | Show empty changelists | `true` |
-| `gitChangelists.autoRefreshOnSave` | Auto-refresh on file save | `true` |
-| `gitChangelists.confirmBeforeCommit` | Confirm before commit | `true` |
-| `gitChangelists.confirmBeforeRevert` | Confirm before revert | `true` |
+| `gitChangelists.showEmptyChangelists` | Show changelists with no files | `true` |
+| `gitChangelists.autoRefreshOnSave` | Auto-refresh when files are saved | `true` |
+| `gitChangelists.confirmBeforeCommit` | Show confirmation before committing | `true` |
+| `gitChangelists.confirmBeforeRevert` | Show confirmation before reverting | `true` |
+| `gitChangelists.saveSnapshotsToFile` | Save snapshots to `.gitchangelists/` folder for CLI tools | `false` |
 
 ## How It Works
 
-Unlike traditional shelve/stash systems that save diffs, Git Changelists saves the **complete file content** for each snapshot. This means:
+Unlike traditional shelve/stash systems that store diffs, Git Changelists saves **complete file content** for each snapshot:
 
-- Snapshots never become corrupted due to conflicting changes
-- Each snapshot is independent - no dependencies on HEAD
-- You can have multiple versions of the same file in different changelists
-- Switching between versions is instant and reliable
+- **No Corruption** - Snapshots are independent of HEAD changes
+- **Multiple Versions** - Same file can exist in different changelists with different content
+- **Instant Switching** - Restore any version immediately
+- **Safe Storage** - Snapshots persist across VS Code sessions
 
 ## Requirements
 
-- VS Code 1.85.0+
-- Git installed
+- VS Code 1.85.0 or higher
+- Git installed and configured
 
-## License
+## Contributing
 
-MIT License - see [LICENSE](LICENSE) for details.
+Contributions are welcome! Please feel free to submit a [Pull Request](https://github.com/harungecit/git-changelists/pulls) or open an [Issue](https://github.com/harungecit/git-changelists/issues).
 
 ## Author
 
 **Harun Gecit**
-- Website: [harungecit.dev](https://harungecit.dev)
-- GitHub: [@harungecit](https://github.com/harungecit)
-- LinkedIn: [harungecit](https://linkedin.com/in/harungecit)
-- Instagram: [@harungecit.dev](https://instagram.com/harungecit.dev)
-- Email: info@harungecit.com
 
-## Contributing
-
-Contributions welcome! Please open an issue or PR.
+* 💻 **Web:** [harungecit.dev](https://harungecit.dev)
+* 📧 **Email:** info@harungecit.com
+* 🐙 **GitHub:** [@harungecit](https://github.com/harungecit)
+* 💼 **LinkedIn:** [harungecit](https://linkedin.com/in/harungecit)
+* 📸 **Instagram:** [@harungecit.dev](https://instagram.com/harungecit.dev)
 
 ---
 
-**Enjoy organizing your changes!**
+**License:** [Apache 2.0](LICENSE)

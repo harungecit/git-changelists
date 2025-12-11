@@ -116,11 +116,11 @@ export interface ShelvedResourceState extends vscode.SourceControlResourceState 
  * Configuration options
  */
 export interface ChangelistConfig {
-    defaultChangelistName: string;
     showEmptyChangelists: boolean;
     autoRefreshOnSave: boolean;
     confirmBeforeCommit: boolean;
     confirmBeforeRevert: boolean;
+    saveSnapshotsToFile: boolean;
 }
 
 /**

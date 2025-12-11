@@ -10,3 +10,4 @@ tsconfig.json
 esbuild.config.js
 **/*.md
 !README.md
+.gitchangelists/**

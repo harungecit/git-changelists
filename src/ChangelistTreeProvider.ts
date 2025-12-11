@@ -101,14 +101,14 @@ export class ChangelistTreeItem extends vscode.TreeItem {
         this.contextValue = 'working-file';
 
         const dirPath = path.dirname(file.relativePath);
-        const statusBadge = decoration.badge;
-        this.description = dirPath && dirPath !== '.' ? `${dirPath} • ${statusBadge}` : statusBadge;
+        this.description = dirPath && dirPath !== '.' ? dirPath : '';
 
         this.tooltip = new vscode.MarkdownString();
         this.tooltip.appendMarkdown(`**${file.relativePath}**\n\n`);
         this.tooltip.appendMarkdown(`Status: ${decoration.tooltip}\n\n`);
-        this.tooltip.appendMarkdown('_Click to view diff, right-click to shelve_');
+        this.tooltip.appendMarkdown('_Click to view diff, right-click to save snapshot_');
 
+        // Use resourceUri for proper file type icons from VS Code
         this.resourceUri = vscode.Uri.file(file.absolutePath);
 
         this.command = {
@@ -125,20 +125,17 @@ export class ChangelistTreeItem extends vscode.TreeItem {
         this.contextValue = 'shelved-file';
 
         const dirPath = path.dirname(shelvedFile.relativePath);
-        const statusBadge = `S(${decoration.badge})`;
-        this.description = dirPath && dirPath !== '.' ? `${dirPath} • ${statusBadge}` : statusBadge;
+        const dateStr = new Date(shelvedFile.shelvedAt).toLocaleString();
+        this.description = dirPath && dirPath !== '.' ? dirPath : '';
 
         this.tooltip = new vscode.MarkdownString();
         this.tooltip.appendMarkdown(`**${shelvedFile.relativePath}**\n\n`);
-        this.tooltip.appendMarkdown(`Shelved: ${new Date(shelvedFile.shelvedAt).toLocaleString()}\n\n`);
+        this.tooltip.appendMarkdown(`Saved: ${dateStr}\n\n`);
         this.tooltip.appendMarkdown(`Original status: ${decoration.tooltip}\n\n`);
-        this.tooltip.appendMarkdown('_Right-click to unshelve or delete_');
+        this.tooltip.appendMarkdown('_Click to preview diff, right-click for options_');
 
-        const absolutePath = toAbsolutePath(shelvedFile.relativePath);
-        this.resourceUri = vscode.Uri.file(absolutePath);
-
-        // Faded appearance for shelved files
-        this.iconPath = new vscode.ThemeIcon('archive', new vscode.ThemeColor('disabledForeground'));
+        // Use resourceUri for proper file type icons from VS Code
+        this.resourceUri = vscode.Uri.file(toAbsolutePath(shelvedFile.relativePath));
 
         this.command = {
             command: 'gitChangelist.previewShelved',
@@ -301,6 +298,27 @@ export function registerChangelistTreeView(
         showCollapseAll: true,
         canSelectMany: true
     });
+
+    // Update badge when data changes
+    const updateBadge = () => {
+        const changelists = service.getChangelists();
+        const totalSnapshots = changelists.reduce((sum, cl) => sum + cl.shelvedFiles.length, 0);
+
+        if (totalSnapshots > 0) {
+            treeView.badge = {
+                value: totalSnapshots,
+                tooltip: `${totalSnapshots} snapshot${totalSnapshots > 1 ? 's' : ''} saved`
+            };
+        } else {
+            treeView.badge = undefined;
+        }
+    };
+
+    // Initial badge update
+    updateBadge();
+
+    // Update badge when changelists change
+    service.onDidChangeChangelists(() => updateBadge());
 
     context.subscriptions.push(treeView);
 

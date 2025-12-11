@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ChangelistService } from './ChangelistService';
-import { ChangelistProvider, ChangelistDecorationProvider } from './ChangelistProvider';
+// SCM Provider removed - using only Tree View
 import { registerChangelistTreeView } from './ChangelistTreeProvider';
 import { registerGitContentProvider, createGitUri, createSnapshotUri } from './GitContentProvider';
 import { ChangelistExport, ShelvedFile } from './types';
@@ -21,7 +21,6 @@ import {
 } from './utils';
 
 let service: ChangelistService | undefined;
-let provider: ChangelistProvider | undefined;
 let outputChannel: vscode.OutputChannel | undefined;
 
 /**
@@ -46,25 +45,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
 
     service = new ChangelistService(context);
-    provider = new ChangelistProvider(service);
 
-    const decorationProvider = new ChangelistDecorationProvider(service);
-    context.subscriptions.push(
-        vscode.window.registerFileDecorationProvider(decorationProvider)
-    );
-
+    // Only use Tree View - no SCM Provider, no extra decorations
     registerChangelistTreeView(context, service);
     registerGitContentProvider(context);
 
     vscode.commands.executeCommand('setContext', 'gitChangelists.enabled', true);
 
-    registerCommands(context, service, provider);
+    registerCommands(context, service);
 
     await service.refresh();
 
     log('Git Changelists extension activated');
 
-    context.subscriptions.push(service, provider, outputChannel);
+    context.subscriptions.push(service, outputChannel!);
 }
 
 /**
@@ -72,8 +66,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
  */
 function registerCommands(
     context: vscode.ExtensionContext,
-    service: ChangelistService,
-    provider: ChangelistProvider
+    service: ChangelistService
 ): void {
     const commands: Array<[string, (...args: unknown[]) => Promise<void>]> = [
         // Changelist management
@@ -92,13 +85,17 @@ function registerCommands(
 
         // Commit operations
         ['gitChangelist.commitChangelist', (arg) => commitChangelist(service, arg)],
-        ['gitChangelist.commitWorkingChanges', () => commitWorkingChanges(service, provider)],
+        ['gitChangelist.commitWorkingChanges', () => commitWorkingChanges(service)],
 
         // File operations
         ['gitChangelist.openFile', (arg) => openFile(arg)],
         ['gitChangelist.openDiff', (arg) => openDiff(arg)],
         ['gitChangelist.previewShelved', (arg) => previewShelved(arg)],
         ['gitChangelist.revertFile', (arg) => revertFile(service, arg)],
+
+        // Chat integration
+        ['gitChangelist.addToChat', (arg) => addToChat(service, arg)],
+        ['gitChangelist.addWorkingFileToChat', (arg) => addWorkingFileToChat(arg)],
 
         // Other
         ['gitChangelist.refreshAll', () => refreshAll(service)],
@@ -118,10 +115,48 @@ function registerCommands(
 
 // ========== Changelist Management ==========
 
+/**
+ * Generate smart suggestion for next changelist name based on existing names
+ */
+function generateChangelistNameSuggestion(service: ChangelistService): string {
+    const changelists = service.getChangelists().filter(cl => !cl.isDefault);
+
+    if (changelists.length === 0) {
+        return 'v1';
+    }
+
+    // Get the last created changelist name
+    const lastChangelist = changelists[changelists.length - 1];
+    const lastName = lastChangelist.label;
+
+    // Try to find a number pattern at the end and increment it
+    // Patterns: "v1" -> "v2", "version 1" -> "version 2", "name_1" -> "name_2", "test-3" -> "test-4"
+    const patterns = [
+        /^(v)(\d+)$/i,                    // v1, V1, v2, etc.
+        /^(.+?)(\d+)$/,                   // anything ending with number: version1, test2
+        /^(.+?[_\-\s])(\d+)$/,            // with separator: version_1, test-2, name 3
+    ];
+
+    for (const pattern of patterns) {
+        const match = lastName.match(pattern);
+        if (match) {
+            const prefix = match[1];
+            const num = parseInt(match[2], 10);
+            return `${prefix}${num + 1}`;
+        }
+    }
+
+    // No number pattern found, append "2" to the name
+    return `${lastName}2`;
+}
+
 async function createChangelist(service: ChangelistService): Promise<void> {
-    const name = await promptInput({
-        prompt: 'Enter changelist name',
-        placeholder: 'My Changelist',
+    const suggestion = generateChangelistNameSuggestion(service);
+
+    const name = await vscode.window.showInputBox({
+        prompt: 'Enter changelist name (press Enter for suggested name)',
+        value: suggestion,
+        valueSelection: [0, suggestion.length], // Select all so user can easily override
         validateInput: (value) => {
             if (!value.trim()) return 'Name cannot be empty';
             return undefined;
@@ -478,10 +513,7 @@ async function commitChangelist(service: ChangelistService, arg: unknown): Promi
     }
 }
 
-async function commitWorkingChanges(
-    service: ChangelistService,
-    provider: ChangelistProvider
-): Promise<void> {
+async function commitWorkingChanges(service: ChangelistService): Promise<void> {
     const files = service.getChangedFiles();
 
     if (files.length === 0) {
@@ -489,11 +521,16 @@ async function commitWorkingChanges(
         return;
     }
 
-    const message = provider.getSourceControl().inputBox.value;
-    if (!message.trim()) {
-        showWarning('Please enter a commit message');
-        return;
-    }
+    const message = await promptInput({
+        prompt: 'Enter commit message',
+        placeholder: 'Commit message',
+        validateInput: (value) => {
+            if (!value.trim()) return 'Message cannot be empty';
+            return undefined;
+        }
+    });
+
+    if (!message) return;
 
     const config = getConfig();
     if (config.confirmBeforeCommit) {
@@ -503,7 +540,6 @@ async function commitWorkingChanges(
 
     try {
         await service.commitWorkingChanges(message.trim());
-        provider.getSourceControl().inputBox.value = '';
         showInfo(`Committed ${files.length} file(s)`);
     } catch (error) {
         showError(`Commit failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -616,6 +652,94 @@ async function revertFile(service: ChangelistService, arg: unknown): Promise<voi
         showInfo(`Reverted: ${path.basename(filePath)}`);
     } catch (error) {
         showError(`Revert failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+// ========== Chat Integration ==========
+
+/**
+ * Add a snapshot to VS Code Chat (Copilot, etc.)
+ * If saveSnapshotsToFile is enabled, uses the file from .gitchangelists/
+ * Otherwise, creates a temporary file or uses the snapshot content directly
+ */
+async function addToChat(service: ChangelistService, arg: unknown): Promise<void> {
+    const { shelvedFile, changelistId } = getShelvedFileInfoFromArg(arg);
+
+    if (!shelvedFile || !changelistId) {
+        showWarning('No snapshot selected');
+        return;
+    }
+
+    const changelist = service.getChangelist(changelistId);
+    if (!changelist) {
+        showError('Changelist not found');
+        return;
+    }
+
+    const config = getConfig();
+    let snapshotPath: string;
+
+    if (config.saveSnapshotsToFile) {
+        // Use the file from .gitchangelists/
+        snapshotPath = service.getSnapshotFilePath(shelvedFile, changelist);
+
+        // Check if file exists
+        if (!fs.existsSync(snapshotPath)) {
+            showError('Snapshot file not found. Enable "Save Snapshots to File" in settings and save the snapshot again.');
+            return;
+        }
+    } else {
+        // Create a temporary file for the snapshot
+        const workspaceRoot = getWorkspaceRoot()!;
+        const tempDir = path.join(workspaceRoot, '.gitchangelists', '.temp');
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+
+        const fileName = path.basename(shelvedFile.relativePath);
+        snapshotPath = path.join(tempDir, `${changelist.label.replace(/[<>:"/\\|?*]/g, '_')}_${fileName}`);
+
+        if (shelvedFile.originalContent) {
+            fs.writeFileSync(snapshotPath, shelvedFile.originalContent, 'utf8');
+        } else {
+            showError('No content available for this snapshot');
+            return;
+        }
+    }
+
+    const snapshotUri = vscode.Uri.file(snapshotPath);
+
+    try {
+        // Try to use VS Code's chat API to add the file as context
+        // This works with GitHub Copilot Chat and other chat extensions
+        await vscode.commands.executeCommand('workbench.action.chat.attachFile', snapshotUri);
+        showInfo(`Added snapshot to chat: ${path.basename(shelvedFile.relativePath)}`);
+    } catch {
+        // Fallback: Copy the path to clipboard and show message
+        await vscode.env.clipboard.writeText(snapshotPath);
+        showInfo(`Snapshot path copied to clipboard: ${snapshotPath}\nYou can paste this in any AI chat tool.`);
+    }
+}
+
+/**
+ * Add a working file to VS Code Chat
+ */
+async function addWorkingFileToChat(arg: unknown): Promise<void> {
+    const filePath = getFilePathFromArg(arg);
+    if (!filePath) {
+        showWarning('No file selected');
+        return;
+    }
+
+    const absolutePath = toAbsolutePath(filePath);
+    const fileUri = vscode.Uri.file(absolutePath);
+
+    try {
+        await vscode.commands.executeCommand('workbench.action.chat.attachFile', fileUri);
+        showInfo(`Added to chat: ${path.basename(filePath)}`);
+    } catch {
+        await vscode.env.clipboard.writeText(absolutePath);
+        showInfo(`File path copied to clipboard: ${absolutePath}`);
     }
 }
 

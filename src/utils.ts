@@ -87,11 +87,11 @@ export function mapGitStatus(index: string, workingDir: string): GitFileStatus {
 export function getConfig(): ChangelistConfig {
     const config = vscode.workspace.getConfiguration('gitChangelists');
     return {
-        defaultChangelistName: config.get('defaultChangelistName', 'Default Changelist'),
         showEmptyChangelists: config.get('showEmptyChangelists', true),
         autoRefreshOnSave: config.get('autoRefreshOnSave', true),
         confirmBeforeCommit: config.get('confirmBeforeCommit', true),
-        confirmBeforeRevert: config.get('confirmBeforeRevert', true)
+        confirmBeforeRevert: config.get('confirmBeforeRevert', true),
+        saveSnapshotsToFile: config.get('saveSnapshotsToFile', false)
     };
 }
 

@@ -23,6 +23,7 @@ import {
 
 const STATE_KEY = 'gitChangelists.state';
 const STATE_VERSION = 3; // Bumped for full-content shelving
+const SNAPSHOTS_DIR = '.gitchangelists';
 
 /**
  * Service for managing changelists with shelve/unshelve functionality
@@ -43,6 +44,76 @@ export class ChangelistService implements vscode.Disposable {
         this.state = this.loadState();
         this.initGit();
         this.setupWatchers();
+        this.ensureSnapshotsDir();
+    }
+
+    private ensureSnapshotsDir(): void {
+        const config = getConfig();
+        if (!config.saveSnapshotsToFile) return;
+
+        const workspaceRoot = getWorkspaceRoot();
+        if (!workspaceRoot) return;
+
+        const snapshotsDir = path.join(workspaceRoot, SNAPSHOTS_DIR);
+        if (!fs.existsSync(snapshotsDir)) {
+            fs.mkdirSync(snapshotsDir, { recursive: true });
+            // Add .gitignore to exclude snapshots from git
+            const gitignorePath = path.join(snapshotsDir, '.gitignore');
+            fs.writeFileSync(gitignorePath, '*\n!.gitignore\n', 'utf8');
+            log(`Created snapshots directory: ${snapshotsDir}`);
+        }
+    }
+
+    /**
+     * Get the file path for a snapshot in .gitchangelists/
+     * Format: .gitchangelists/{changelist-name}/{filename}
+     */
+    public getSnapshotFilePath(shelvedFile: ShelvedFile, changelist: Changelist): string {
+        const workspaceRoot = getWorkspaceRoot()!;
+        // Sanitize changelist name for folder use
+        const sanitizedName = changelist.label.replace(/[<>:"/\\|?*]/g, '_');
+        const fileName = path.basename(shelvedFile.relativePath);
+        return path.join(workspaceRoot, SNAPSHOTS_DIR, sanitizedName, fileName);
+    }
+
+    /**
+     * Save snapshot content to file for CLI tool access (Claude Code, Gemini, etc.)
+     */
+    private async saveSnapshotToFile(shelvedFile: ShelvedFile, changelist: Changelist): Promise<void> {
+        const config = getConfig();
+        if (!config.saveSnapshotsToFile) return;
+        if (!shelvedFile.originalContent) return;
+
+        const snapshotPath = this.getSnapshotFilePath(shelvedFile, changelist);
+        const snapshotDir = path.dirname(snapshotPath);
+
+        try {
+            if (!fs.existsSync(snapshotDir)) {
+                fs.mkdirSync(snapshotDir, { recursive: true });
+            }
+            fs.writeFileSync(snapshotPath, shelvedFile.originalContent, 'utf8');
+            log(`Saved snapshot file: ${snapshotPath}`);
+        } catch (error) {
+            log(`Failed to save snapshot file: ${error}`, 'warn');
+        }
+    }
+
+    /**
+     * Delete snapshot file when snapshot is deleted
+     */
+    private deleteSnapshotFile(shelvedFile: ShelvedFile, changelist: Changelist): void {
+        const config = getConfig();
+        if (!config.saveSnapshotsToFile) return;
+
+        const snapshotPath = this.getSnapshotFilePath(shelvedFile, changelist);
+        try {
+            if (fs.existsSync(snapshotPath)) {
+                fs.unlinkSync(snapshotPath);
+                log(`Deleted snapshot file: ${snapshotPath}`);
+            }
+        } catch (error) {
+            log(`Failed to delete snapshot file: ${error}`, 'warn');
+        }
     }
 
     private initGit(): void {
@@ -87,7 +158,6 @@ export class ChangelistService implements vscode.Disposable {
         }
 
         // Initialize default state
-        const config = getConfig();
         const defaultId = generateId();
         const defaultState: ChangelistState = {
             version: STATE_VERSION,
@@ -95,7 +165,7 @@ export class ChangelistService implements vscode.Disposable {
             changelists: [
                 {
                     id: defaultId,
-                    label: config.defaultChangelistName,
+                    label: 'Default Changelist',
                     shelvedFiles: [],
                     isDefault: true,
                     isActive: true
@@ -356,6 +426,9 @@ export class ChangelistService implements vscode.Disposable {
                 changelist.shelvedFiles.push(shelvedFile);
                 log(`Saved snapshot: ${relativePath} to ${changelist.label}`);
             }
+
+            // Save snapshot to file for CLI tool access
+            await this.saveSnapshotToFile(shelvedFile, changelist);
 
             // DO NOT revert the file - leave it as-is so user can continue working
             // The file stays in working directory with current changes
@@ -663,6 +736,15 @@ export class ChangelistService implements vscode.Disposable {
         }
 
         const normalizedPath = normalizePath(relativePath);
+        const shelvedFile = changelist.shelvedFiles.find(
+            f => normalizePath(f.relativePath) === normalizedPath
+        );
+
+        // Delete snapshot file
+        if (shelvedFile) {
+            this.deleteSnapshotFile(shelvedFile, changelist);
+        }
+
         changelist.shelvedFiles = changelist.shelvedFiles.filter(
             f => normalizePath(f.relativePath) !== normalizedPath
         );

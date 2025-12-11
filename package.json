@@ -1,14 +1,16 @@
 {
   "name": "git-changelists",
   "displayName": "Git Changelists",
-  "description": "IntelliJ-style changelists for VS Code. Organize your changes into multiple groups and commit them separately.",
+  "description": "IntelliJ-style changelists for VS Code. Save snapshots of your changes, switch between versions, and commit selectively.",
   "version": "1.0.0",
   "publisher": "harungecit",
   "author": {
-    "name": "Harun Gecit",
+    "name": "Harun Geçit",
     "email": "info@harungecit.com",
     "url": "https://harungecit.dev"
   },
+  "displayPublisherName": "Harun Geçit",
+  "license": "Apache-2.0",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -43,7 +45,7 @@
         {
           "id": "gitChangelists",
           "title": "Git Changelists",
-          "icon": "resources/icon.svg"
+          "icon": "resources/icon.png"
         }
       ]
     },
@@ -176,85 +178,21 @@
         "title": "Shelve to Changelist...",
         "icon": "$(archive)",
         "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.addToChat",
+        "title": "Add to Chat",
+        "icon": "$(comment-discussion)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.addWorkingFileToChat",
+        "title": "Add to Chat",
+        "icon": "$(comment-discussion)",
+        "category": "Git Changelists"
       }
     ],
     "menus": {
-      "scm/title": [
-        {
-          "command": "gitChangelist.createChangelist",
-          "group": "navigation@1",
-          "when": "scmProvider == gitChangelists"
-        },
-        {
-          "command": "gitChangelist.refreshAll",
-          "group": "navigation@2",
-          "when": "scmProvider == gitChangelists"
-        },
-        {
-          "command": "gitChangelist.exportChangelists",
-          "group": "1_export@1",
-          "when": "scmProvider == gitChangelists"
-        },
-        {
-          "command": "gitChangelist.importChangelists",
-          "group": "1_export@2",
-          "when": "scmProvider == gitChangelists"
-        }
-      ],
-      "scm/resourceGroup/context": [
-        {
-          "command": "gitChangelist.commitChangelist",
-          "group": "inline@1",
-          "when": "scmProvider == gitChangelists"
-        },
-        {
-          "command": "gitChangelist.setActiveChangelist",
-          "group": "inline@2",
-          "when": "scmProvider == gitChangelists && scmResourceGroup != default"
-        },
-        {
-          "command": "gitChangelist.renameChangelist",
-          "group": "1_modify@1",
-          "when": "scmProvider == gitChangelists"
-        },
-        {
-          "command": "gitChangelist.deleteChangelist",
-          "group": "1_modify@2",
-          "when": "scmProvider == gitChangelists && scmResourceGroup != default"
-        }
-      ],
-      "scm/resourceState/context": [
-        {
-          "command": "gitChangelist.openDiff",
-          "group": "inline@1",
-          "when": "scmProvider == gitChangelists"
-        },
-        {
-          "command": "gitChangelist.revertFile",
-          "group": "inline@2",
-          "when": "scmProvider == gitChangelists"
-        },
-        {
-          "command": "gitChangelist.moveToChangelist",
-          "group": "1_move@1",
-          "when": "scmProvider == gitChangelists"
-        },
-        {
-          "command": "gitChangelist.openFile",
-          "group": "2_open@1",
-          "when": "scmProvider == gitChangelists"
-        },
-        {
-          "command": "gitChangelist.openDiff",
-          "group": "2_open@2",
-          "when": "scmProvider == gitChangelists"
-        },
-        {
-          "command": "gitChangelist.revertFile",
-          "group": "3_revert@1",
-          "when": "scmProvider == gitChangelists"
-        }
-      ],
       "commandPalette": [
         {
           "command": "gitChangelist.createChangelist",
@@ -360,17 +298,22 @@
           "command": "gitChangelist.previewShelved",
           "when": "view == gitChangelistsView && viewItem == shelved-file",
           "group": "1_shelved@3"
+        },
+        {
+          "command": "gitChangelist.addToChat",
+          "when": "view == gitChangelistsView && viewItem == shelved-file",
+          "group": "2_chat@1"
+        },
+        {
+          "command": "gitChangelist.addWorkingFileToChat",
+          "when": "view == gitChangelistsView && viewItem == working-file",
+          "group": "2_file@2"
         }
       ]
     },
     "configuration": {
       "title": "Git Changelists",
       "properties": {
-        "gitChangelists.defaultChangelistName": {
-          "type": "string",
-          "default": "Default Changelist",
-          "description": "Name of the default changelist"
-        },
         "gitChangelists.showEmptyChangelists": {
           "type": "boolean",
           "default": true,
@@ -390,6 +333,11 @@
           "type": "boolean",
           "default": true,
           "description": "Show confirmation dialog before reverting changes"
+        },
+        "gitChangelists.saveSnapshotsToFile": {
+          "type": "boolean",
+          "default": false,
+          "description": "Save snapshots as files to .gitchangelists/ folder for CLI tool access (Claude Code, Gemini, etc.)"
         }
       }
     },
