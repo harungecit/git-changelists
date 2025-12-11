@@ -45,7 +45,7 @@
 1. Download the latest `.vsix` file from [GitHub Releases](https://github.com/harungecit/smart-changelists/releases)
 2. Install via command line:
 ```bash
-code --install-extension smart-changelists-1.1.0.vsix
+code --install-extension smart-changelists-1.1.1.vsix
 ```
 
 ## Quick Start

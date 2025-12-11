@@ -1,5 +1,14 @@
 # Changelogs
 
+## [1.1.1] - 2025-12-11
+
+### Changed
+- Rebranded to **Smart Changelists**
+- All internal references updated from `gitChangelists` to `smartChangelists`
+- Snapshot folder renamed from `.gitchangelists/` to `.smartchangelists/`
+
+---
+
 ## [1.1.0] - 2025-12-11
 
 ### Added
