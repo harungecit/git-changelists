@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=harungecit.git-changelists"><img src="https://img.shields.io/visual-studio-marketplace/v/harungecit.git-changelists?style=flat-square&label=Marketplace" alt="VS Code Marketplace"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=harungecit.git-changelist"><img src="https://img.shields.io/visual-studio-marketplace/v/harungecit.git-changelist?style=flat-square&label=Marketplace" alt="VS Code Marketplace"></a>
   &nbsp;
   <a href="https://github.com/harungecit/git-changelists/releases"><img src="https://img.shields.io/github/v/release/harungecit/git-changelists?style=flat-square&label=Release" alt="GitHub Release"></a>
   &nbsp;
@@ -45,7 +45,7 @@
 1. Download the latest `.vsix` file from [GitHub Releases](https://github.com/harungecit/git-changelists/releases)
 2. Install via command line:
 ```bash
-code --install-extension git-changelists-1.1.0.vsix
+code --install-extension git-changelist-1.1.0.vsix
 ```
 
 ## Quick Start
