@@ -1,6 +1,6 @@
 {
-  "name": "git-changelist",
-  "displayName": "Git Changelists",
+  "name": "smart-changelists",
+  "displayName": "Smart Changelists",
   "description": "IntelliJ-style changelists for VS Code. Save snapshots of your changes, switch between versions, and commit selectively.",
   "version": "1.1.0",
   "publisher": "harungecit",
@@ -29,11 +29,11 @@
   "icon": "resources/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/harungecit/git-changelists"
+    "url": "https://github.com/harungecit/smart-changelists"
   },
-  "homepage": "https://github.com/harungecit/git-changelists#readme",
+  "homepage": "https://github.com/harungecit/smart-changelists#readme",
   "bugs": {
-    "url": "https://github.com/harungecit/git-changelists/issues"
+    "url": "https://github.com/harungecit/smart-changelists/issues"
   },
   "activationEvents": [
     "workspaceContains:.git"
@@ -43,325 +43,325 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "gitChangelists",
-          "title": "Git Changelists",
+          "id": "smartChangelists",
+          "title": "Smart Changelists",
           "icon": "resources/icon.png"
         }
       ]
     },
     "views": {
-      "gitChangelists": [
+      "smartChangelists": [
         {
-          "id": "gitChangelistsView",
+          "id": "smartChangelistsView",
           "name": "Changelists",
-          "when": "gitChangelists.enabled",
-          "contextualTitle": "Git Changelists"
+          "when": "smartChangelists.enabled",
+          "contextualTitle": "Smart Changelists"
         }
       ]
     },
     "commands": [
       {
-        "command": "gitChangelist.createChangelist",
+        "command": "smartChangelists.createChangelist",
         "title": "Create Changelist",
         "icon": "$(add)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.deleteChangelist",
+        "command": "smartChangelists.deleteChangelist",
         "title": "Delete Changelist",
         "icon": "$(trash)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.renameChangelist",
+        "command": "smartChangelists.renameChangelist",
         "title": "Rename Changelist",
         "icon": "$(edit)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.shelveFile",
+        "command": "smartChangelists.shelveFile",
         "title": "Shelve to Changelist...",
         "icon": "$(archive)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.unshelveFile",
+        "command": "smartChangelists.unshelveFile",
         "title": "Restore to Working",
         "icon": "$(export)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.unshelveAll",
+        "command": "smartChangelists.unshelveAll",
         "title": "Restore All to Working",
         "icon": "$(export)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.applyAndStage",
+        "command": "smartChangelists.applyAndStage",
         "title": "Apply & Stage",
         "icon": "$(git-commit)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.applyAllAndStage",
+        "command": "smartChangelists.applyAllAndStage",
         "title": "Apply All & Stage",
         "icon": "$(git-commit)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.deleteShelvedFile",
+        "command": "smartChangelists.deleteShelvedFile",
         "title": "Delete Snapshot",
         "icon": "$(trash)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.commitChangelist",
+        "command": "smartChangelists.commitChangelist",
         "title": "Commit Shelved Changelist",
         "icon": "$(check)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.commitWorkingChanges",
+        "command": "smartChangelists.commitWorkingChanges",
         "title": "Commit Working Changes",
         "icon": "$(check)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.refreshAll",
+        "command": "smartChangelists.refreshAll",
         "title": "Refresh",
         "icon": "$(refresh)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.exportChangelists",
+        "command": "smartChangelists.exportChangelists",
         "title": "Export Changelists",
         "icon": "$(export)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.importChangelists",
+        "command": "smartChangelists.importChangelists",
         "title": "Import Changelists",
         "icon": "$(import)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.openFile",
+        "command": "smartChangelists.openFile",
         "title": "Open File",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.openDiff",
+        "command": "smartChangelists.openDiff",
         "title": "Open Diff",
         "icon": "$(diff)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.previewShelved",
+        "command": "smartChangelists.previewShelved",
         "title": "Preview Shelved Changes",
         "icon": "$(preview)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.revertFile",
+        "command": "smartChangelists.revertFile",
         "title": "Revert Changes",
         "icon": "$(discard)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.setActiveChangelist",
+        "command": "smartChangelists.setActiveChangelist",
         "title": "Set as Active Changelist",
         "icon": "$(star-full)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.moveToChangelist",
+        "command": "smartChangelists.moveToChangelist",
         "title": "Shelve to Changelist...",
         "icon": "$(archive)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.addToChat",
+        "command": "smartChangelists.addToChat",
         "title": "Add to Chat",
         "icon": "$(comment-discussion)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.addWorkingFileToChat",
+        "command": "smartChangelists.addWorkingFileToChat",
         "title": "Add to Chat",
         "icon": "$(comment-discussion)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.compareWith",
+        "command": "smartChangelists.compareWith",
         "title": "Compare with...",
         "icon": "$(git-compare)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       },
       {
-        "command": "gitChangelist.compareAllVersions",
+        "command": "smartChangelists.compareAllVersions",
         "title": "Compare All Versions",
         "icon": "$(versions)",
-        "category": "Git Changelists"
+        "category": "Smart Changelists"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "gitChangelist.createChangelist",
-          "when": "gitChangelists.enabled"
+          "command": "smartChangelists.createChangelist",
+          "when": "smartChangelists.enabled"
         },
         {
-          "command": "gitChangelist.refreshAll",
-          "when": "gitChangelists.enabled"
+          "command": "smartChangelists.refreshAll",
+          "when": "smartChangelists.enabled"
         },
         {
-          "command": "gitChangelist.exportChangelists",
-          "when": "gitChangelists.enabled"
+          "command": "smartChangelists.exportChangelists",
+          "when": "smartChangelists.enabled"
         },
         {
-          "command": "gitChangelist.importChangelists",
-          "when": "gitChangelists.enabled"
+          "command": "smartChangelists.importChangelists",
+          "when": "smartChangelists.enabled"
         }
       ],
       "view/title": [
         {
-          "command": "gitChangelist.createChangelist",
-          "when": "view == gitChangelistsView",
+          "command": "smartChangelists.createChangelist",
+          "when": "view == smartChangelistsView",
           "group": "navigation@1"
         },
         {
-          "command": "gitChangelist.refreshAll",
-          "when": "view == gitChangelistsView",
+          "command": "smartChangelists.refreshAll",
+          "when": "view == smartChangelistsView",
           "group": "navigation@2"
         }
       ],
       "view/item/context": [
         {
-          "command": "gitChangelist.commitChangelist",
-          "when": "view == gitChangelistsView && viewItem =~ /changelist/",
+          "command": "smartChangelists.commitChangelist",
+          "when": "view == smartChangelistsView && viewItem =~ /changelist/",
           "group": "inline@1"
         },
         {
-          "command": "gitChangelist.setActiveChangelist",
-          "when": "view == gitChangelistsView && viewItem == changelist",
+          "command": "smartChangelists.setActiveChangelist",
+          "when": "view == smartChangelistsView && viewItem == changelist",
           "group": "inline@2"
         },
         {
-          "command": "gitChangelist.renameChangelist",
-          "when": "view == gitChangelistsView && viewItem =~ /changelist/",
+          "command": "smartChangelists.renameChangelist",
+          "when": "view == smartChangelistsView && viewItem =~ /changelist/",
           "group": "1_changelist@1"
         },
         {
-          "command": "gitChangelist.deleteChangelist",
-          "when": "view == gitChangelistsView && viewItem == changelist",
+          "command": "smartChangelists.deleteChangelist",
+          "when": "view == smartChangelistsView && viewItem == changelist",
           "group": "1_changelist@2"
         },
         {
-          "command": "gitChangelist.unshelveAll",
-          "when": "view == gitChangelistsView && viewItem =~ /changelist/",
+          "command": "smartChangelists.unshelveAll",
+          "when": "view == smartChangelistsView && viewItem =~ /changelist/",
           "group": "2_shelve@1"
         },
         {
-          "command": "gitChangelist.applyAllAndStage",
-          "when": "view == gitChangelistsView && viewItem =~ /changelist/",
+          "command": "smartChangelists.applyAllAndStage",
+          "when": "view == smartChangelistsView && viewItem =~ /changelist/",
           "group": "2_shelve@2"
         },
         {
-          "command": "gitChangelist.shelveFile",
-          "when": "view == gitChangelistsView && viewItem == working-file",
+          "command": "smartChangelists.shelveFile",
+          "when": "view == smartChangelistsView && viewItem == working-file",
           "group": "1_file@1"
         },
         {
-          "command": "gitChangelist.openDiff",
-          "when": "view == gitChangelistsView && viewItem == working-file",
+          "command": "smartChangelists.openDiff",
+          "when": "view == smartChangelistsView && viewItem == working-file",
           "group": "inline@1"
         },
         {
-          "command": "gitChangelist.revertFile",
-          "when": "view == gitChangelistsView && viewItem == working-file",
+          "command": "smartChangelists.revertFile",
+          "when": "view == smartChangelistsView && viewItem == working-file",
           "group": "inline@2"
         },
         {
-          "command": "gitChangelist.openFile",
-          "when": "view == gitChangelistsView && viewItem == working-file",
+          "command": "smartChangelists.openFile",
+          "when": "view == smartChangelistsView && viewItem == working-file",
           "group": "2_file@1"
         },
         {
-          "command": "gitChangelist.applyAndStage",
-          "when": "view == gitChangelistsView && viewItem == shelved-file",
+          "command": "smartChangelists.applyAndStage",
+          "when": "view == smartChangelistsView && viewItem == shelved-file",
           "group": "inline@1"
         },
         {
-          "command": "gitChangelist.deleteShelvedFile",
-          "when": "view == gitChangelistsView && viewItem == shelved-file",
+          "command": "smartChangelists.deleteShelvedFile",
+          "when": "view == smartChangelistsView && viewItem == shelved-file",
           "group": "inline@2"
         },
         {
-          "command": "gitChangelist.unshelveFile",
-          "when": "view == gitChangelistsView && viewItem == shelved-file",
+          "command": "smartChangelists.unshelveFile",
+          "when": "view == smartChangelistsView && viewItem == shelved-file",
           "group": "1_shelved@1"
         },
         {
-          "command": "gitChangelist.applyAndStage",
-          "when": "view == gitChangelistsView && viewItem == shelved-file",
+          "command": "smartChangelists.applyAndStage",
+          "when": "view == smartChangelistsView && viewItem == shelved-file",
           "group": "1_shelved@2"
         },
         {
-          "command": "gitChangelist.previewShelved",
-          "when": "view == gitChangelistsView && viewItem == shelved-file",
+          "command": "smartChangelists.previewShelved",
+          "when": "view == smartChangelistsView && viewItem == shelved-file",
           "group": "1_shelved@3"
         },
         {
-          "command": "gitChangelist.addToChat",
-          "when": "view == gitChangelistsView && viewItem == shelved-file",
+          "command": "smartChangelists.addToChat",
+          "when": "view == smartChangelistsView && viewItem == shelved-file",
           "group": "2_chat@1"
         },
         {
-          "command": "gitChangelist.addWorkingFileToChat",
-          "when": "view == gitChangelistsView && viewItem == working-file",
+          "command": "smartChangelists.addWorkingFileToChat",
+          "when": "view == smartChangelistsView && viewItem == working-file",
           "group": "2_file@2"
         },
         {
-          "command": "gitChangelist.compareWith",
-          "when": "view == gitChangelistsView && viewItem == shelved-file && config.gitChangelists.enableVersionComparison",
+          "command": "smartChangelists.compareWith",
+          "when": "view == smartChangelistsView && viewItem == shelved-file && config.smartChangelists.enableVersionComparison",
           "group": "3_compare@1"
         },
         {
-          "command": "gitChangelist.compareAllVersions",
-          "when": "view == gitChangelistsView && viewItem == shelved-file && config.gitChangelists.enableVersionComparison",
+          "command": "smartChangelists.compareAllVersions",
+          "when": "view == smartChangelistsView && viewItem == shelved-file && config.smartChangelists.enableVersionComparison",
           "group": "3_compare@2"
         }
       ]
     },
     "configuration": {
-      "title": "Git Changelists",
+      "title": "Smart Changelists",
       "properties": {
-        "gitChangelists.showEmptyChangelists": {
+        "smartChangelists.showEmptyChangelists": {
           "type": "boolean",
           "default": true,
           "description": "Show changelists even when they have no files"
         },
-        "gitChangelists.autoRefreshOnSave": {
+        "smartChangelists.autoRefreshOnSave": {
           "type": "boolean",
           "default": true,
           "description": "Automatically refresh changelists when files are saved"
         },
-        "gitChangelists.confirmBeforeCommit": {
+        "smartChangelists.confirmBeforeCommit": {
           "type": "boolean",
           "default": true,
           "description": "Show confirmation dialog before committing a changelist"
         },
-        "gitChangelists.confirmBeforeRevert": {
+        "smartChangelists.confirmBeforeRevert": {
           "type": "boolean",
           "default": true,
           "description": "Show confirmation dialog before reverting changes"
         },
-        "gitChangelists.saveSnapshotsToFile": {
+        "smartChangelists.saveSnapshotsToFile": {
           "type": "boolean",
           "default": false,
-          "description": "Save snapshots as files to .gitchangelists/ folder for CLI tool access (Claude Code, Gemini, etc.)"
+          "description": "Save snapshots as files to .smartchangelists/ folder for CLI tool access (Claude Code, Gemini, etc.)"
         },
-        "gitChangelists.enableVersionComparison": {
+        "smartChangelists.enableVersionComparison": {
           "type": "boolean",
           "default": false,
           "description": "Enable multi-version comparison and merge features (experimental)"
@@ -370,16 +370,16 @@
     },
     "keybindings": [
       {
-        "command": "gitChangelist.createChangelist",
+        "command": "smartChangelists.createChangelist",
         "key": "ctrl+shift+n",
         "mac": "cmd+shift+n",
-        "when": "gitChangelists.enabled"
+        "when": "smartChangelists.enabled"
       },
       {
-        "command": "gitChangelist.moveToChangelist",
+        "command": "smartChangelists.moveToChangelist",
         "key": "ctrl+shift+m",
         "mac": "cmd+shift+m",
-        "when": "gitChangelists.enabled && scmResourceState"
+        "when": "smartChangelists.enabled && scmResourceState"
       }
     ]
   },

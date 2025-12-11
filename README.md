@@ -1,7 +1,7 @@
-# Git Changelists
+# Smart Changelists
 
 <p align="center">
-  <img src="resources/icon.png" alt="Git Changelists Logo" width="128" height="128">
+  <img src="resources/icon.png" alt="Smart Changelists Logo" width="128" height="128">
 </p>
 
 <p align="center">
@@ -10,9 +10,9 @@
 </p>
 
 <p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=harungecit.git-changelist"><img src="https://img.shields.io/visual-studio-marketplace/v/harungecit.git-changelist?style=flat-square&label=Marketplace" alt="VS Code Marketplace"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=harungecit.smart-changelists"><img src="https://img.shields.io/visual-studio-marketplace/v/harungecit.smart-changelists?style=flat-square&label=Marketplace" alt="VS Code Marketplace"></a>
   &nbsp;
-  <a href="https://github.com/harungecit/git-changelists/releases"><img src="https://img.shields.io/github/v/release/harungecit/git-changelists?style=flat-square&label=Release" alt="GitHub Release"></a>
+  <a href="https://github.com/harungecit/smart-changelists/releases"><img src="https://img.shields.io/github/v/release/harungecit/smart-changelists?style=flat-square&label=Release" alt="GitHub Release"></a>
   &nbsp;
   <a href="https://www.apache.org/licenses/LICENSE-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square" alt="License"></a>
 </p>
@@ -38,14 +38,14 @@
 ### VS Code Marketplace
 1. Open VS Code
 2. Go to Extensions (`Ctrl+Shift+X`)
-3. Search for **"Git Changelists"**
+3. Search for **"Smart Changelists"**
 4. Click **Install**
 
 ### GitHub Releases
-1. Download the latest `.vsix` file from [GitHub Releases](https://github.com/harungecit/git-changelists/releases)
+1. Download the latest `.vsix` file from [GitHub Releases](https://github.com/harungecit/smart-changelists/releases)
 2. Install via command line:
 ```bash
-code --install-extension git-changelist-1.1.0.vsix
+code --install-extension smart-changelists-1.1.0.vsix
 ```
 
 ## Quick Start
@@ -104,10 +104,10 @@ Just press **Enter** to accept or type your own name.
 Right-click any snapshot or working file and select **"Add to Chat"** to add it to VS Code's Chat panel (works with GitHub Copilot and other chat extensions).
 
 ### CLI Tool Access
-Enable `saveSnapshotsToFile` setting to save snapshots as real files in `.gitchangelists/` folder. This allows CLI-based AI tools like **Claude Code**, **Gemini Code**, etc. to access your snapshots directly.
+Enable `saveSnapshotsToFile` setting to save snapshots as real files in `.smartchangelists/` folder. This allows CLI-based AI tools like **Claude Code**, **Gemini Code**, etc. to access your snapshots directly.
 
 ```
-.gitchangelists/
+.smartchangelists/
 ├── v1/
 │   └── config.json
 ├── v2/
@@ -119,12 +119,12 @@ Enable `saveSnapshotsToFile` setting to save snapshots as real files in `.gitcha
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `gitChangelists.showEmptyChangelists` | Show changelists with no files | `true` |
-| `gitChangelists.autoRefreshOnSave` | Auto-refresh when files are saved | `true` |
-| `gitChangelists.confirmBeforeCommit` | Show confirmation before committing | `true` |
-| `gitChangelists.confirmBeforeRevert` | Show confirmation before reverting | `true` |
-| `gitChangelists.saveSnapshotsToFile` | Save snapshots to `.gitchangelists/` for CLI tools | `false` |
-| `gitChangelists.enableVersionComparison` | Enable version comparison features | `false` |
+| `smartChangelists.showEmptyChangelists` | Show changelists with no files | `true` |
+| `smartChangelists.autoRefreshOnSave` | Auto-refresh when files are saved | `true` |
+| `smartChangelists.confirmBeforeCommit` | Show confirmation before committing | `true` |
+| `smartChangelists.confirmBeforeRevert` | Show confirmation before reverting | `true` |
+| `smartChangelists.saveSnapshotsToFile` | Save snapshots to `.smartchangelists/` for CLI tools | `false` |
+| `smartChangelists.enableVersionComparison` | Enable version comparison features | `false` |
 
 ## Version Comparison (Experimental)
 
@@ -163,7 +163,7 @@ Unlike traditional shelve/stash systems that store diffs, Git Changelists saves 
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a [Pull Request](https://github.com/harungecit/git-changelists/pulls) or open an [Issue](https://github.com/harungecit/git-changelists/issues).
+Contributions are welcome! Please feel free to submit a [Pull Request](https://github.com/harungecit/smart-changelists/pulls) or open an [Issue](https://github.com/harungecit/smart-changelists/issues).
 
 ## Author
 

@@ -22,9 +22,9 @@ import {
     normalizePath
 } from './utils';
 
-const STATE_KEY = 'gitChangelists.state';
+const STATE_KEY = 'smartChangelists.state';
 const STATE_VERSION = 3; // Bumped for full-content shelving
-const SNAPSHOTS_DIR = '.gitchangelists';
+const SNAPSHOTS_DIR = '.smartchangelists';
 
 /**
  * Service for managing changelists with shelve/unshelve functionality
@@ -66,8 +66,8 @@ export class ChangelistService implements vscode.Disposable {
     }
 
     /**
-     * Get the file path for a snapshot in .gitchangelists/
-     * Format: .gitchangelists/{changelist-name}/{filename}
+     * Get the file path for a snapshot in .smartchangelists/
+     * Format: .smartchangelists/{changelist-name}/{filename}
      */
     public getSnapshotFilePath(shelvedFile: ShelvedFile, changelist: Changelist): string {
         const workspaceRoot = getWorkspaceRoot()!;
@@ -143,7 +143,7 @@ export class ChangelistService implements vscode.Disposable {
 
         this.disposables.push(
             vscode.workspace.onDidChangeConfiguration(e => {
-                if (e.affectsConfiguration('gitChangelists')) {
+                if (e.affectsConfiguration('smartChangelists')) {
                     this._onDidChangeChangelists.fire();
                 }
             })

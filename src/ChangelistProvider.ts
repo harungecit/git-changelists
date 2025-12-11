@@ -12,7 +12,7 @@ import {
 import { getConfig, toAbsolutePath, getWorkspaceRoot, log } from './utils';
 
 /**
- * SCM Provider for Git Changelists with Shelve support
+ * SCM Provider for Smart Changelists with Shelve support
  */
 export class ChangelistProvider implements vscode.Disposable {
     private sourceControl: vscode.SourceControl;
@@ -23,14 +23,14 @@ export class ChangelistProvider implements vscode.Disposable {
     constructor(private readonly service: ChangelistService) {
         // Create the source control
         this.sourceControl = vscode.scm.createSourceControl(
-            'gitChangelists',
-            'Git Changelists',
+            'smartChangelists',
+            'Smart Changelists',
             vscode.Uri.file(getWorkspaceRoot() || '')
         );
 
         this.sourceControl.inputBox.placeholder = 'Commit message';
         this.sourceControl.acceptInputCommand = {
-            command: 'gitChangelist.commitWorkingChanges',
+            command: 'smartChangelists.commitWorkingChanges',
             title: 'Commit'
         };
 
@@ -137,7 +137,7 @@ export class ChangelistProvider implements vscode.Disposable {
                 tooltip: `${file.relativePath} • ${decoration.tooltip}`
             },
             command: {
-                command: 'gitChangelist.openDiff',
+                command: 'smartChangelists.openDiff',
                 title: 'Open Diff',
                 arguments: [{ file, changelistId: 'working' }]
             }
@@ -163,7 +163,7 @@ export class ChangelistProvider implements vscode.Disposable {
                 tooltip: `${shelvedFile.relativePath} • Shelved (${statusDecoration.tooltip})`
             },
             command: {
-                command: 'gitChangelist.previewShelved',
+                command: 'smartChangelists.previewShelved',
                 title: 'Preview Shelved Changes',
                 arguments: [{ shelvedFile, changelistId }]
             }

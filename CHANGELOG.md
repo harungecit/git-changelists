@@ -11,7 +11,7 @@
 
 **AI/CLI Integration**
 - Add to Chat command for VS Code Chat extensions (Copilot, etc.)
-- Optional file-based snapshots in `.gitchangelists/` folder for CLI tool access
+- Optional file-based snapshots in `.smartchangelists/` folder for CLI tool access
 - New configuration: `saveSnapshotsToFile` (disabled by default)
 - Compatible with Claude Code, Gemini Code, and other AI coding assistants
 

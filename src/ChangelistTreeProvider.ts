@@ -112,7 +112,7 @@ export class ChangelistTreeItem extends vscode.TreeItem {
         this.resourceUri = vscode.Uri.file(file.absolutePath);
 
         this.command = {
-            command: 'gitChangelist.openDiff',
+            command: 'smartChangelists.openDiff',
             title: 'Open Diff',
             arguments: [{ file, changelistId: 'working' }]
         };
@@ -138,7 +138,7 @@ export class ChangelistTreeItem extends vscode.TreeItem {
         this.resourceUri = vscode.Uri.file(toAbsolutePath(shelvedFile.relativePath));
 
         this.command = {
-            command: 'gitChangelist.previewShelved',
+            command: 'smartChangelists.previewShelved',
             title: 'Preview Shelved',
             arguments: [{ shelvedFile, changelistId: this.changelistId }]
         };
@@ -155,8 +155,8 @@ export class ChangelistTreeProvider implements
     private readonly _onDidChangeTreeData = new vscode.EventEmitter<ChangelistTreeItem | undefined | null | void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-    readonly dragMimeTypes = ['application/vnd.code.tree.gitChangelistsView'];
-    readonly dropMimeTypes = ['application/vnd.code.tree.gitChangelistsView'];
+    readonly dragMimeTypes = ['application/vnd.code.tree.smartChangelistsView'];
+    readonly dropMimeTypes = ['application/vnd.code.tree.smartChangelistsView'];
 
     constructor(private readonly service: ChangelistService) {
         service.onDidChangeChangelists(() => this.refresh());
@@ -248,7 +248,7 @@ export class ChangelistTreeProvider implements
         }));
 
         dataTransfer.set(
-            'application/vnd.code.tree.gitChangelistsView',
+            'application/vnd.code.tree.smartChangelistsView',
             new vscode.DataTransferItem(JSON.stringify(dragData))
         );
     }
@@ -263,7 +263,7 @@ export class ChangelistTreeProvider implements
             return;
         }
 
-        const transferItem = dataTransfer.get('application/vnd.code.tree.gitChangelistsView');
+        const transferItem = dataTransfer.get('application/vnd.code.tree.smartChangelistsView');
         if (!transferItem) return;
 
         try {
@@ -292,7 +292,7 @@ export function registerChangelistTreeView(
 ): ChangelistTreeProvider {
     const treeProvider = new ChangelistTreeProvider(service);
 
-    const treeView = vscode.window.createTreeView('gitChangelistsView', {
+    const treeView = vscode.window.createTreeView('smartChangelistsView', {
         treeDataProvider: treeProvider,
         dragAndDropController: treeProvider,
         showCollapseAll: true,

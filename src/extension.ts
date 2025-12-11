@@ -27,10 +27,10 @@ let outputChannel: vscode.OutputChannel | undefined;
  * Activate the extension
  */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-    outputChannel = vscode.window.createOutputChannel('Git Changelists');
+    outputChannel = vscode.window.createOutputChannel('Smart Changelists');
     initLogger(outputChannel);
 
-    log('Activating Git Changelists extension');
+    log('Activating Smart Changelists extension');
 
     const workspaceRoot = getWorkspaceRoot();
     if (!workspaceRoot) {
@@ -50,13 +50,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     registerChangelistTreeView(context, service);
     registerGitContentProvider(context);
 
-    vscode.commands.executeCommand('setContext', 'gitChangelists.enabled', true);
+    vscode.commands.executeCommand('setContext', 'smartChangelists.enabled', true);
 
     registerCommands(context, service);
 
     await service.refresh();
 
-    log('Git Changelists extension activated');
+    log('Smart Changelists extension activated');
 
     context.subscriptions.push(service, outputChannel!);
 }
@@ -70,44 +70,44 @@ function registerCommands(
 ): void {
     const commands: Array<[string, (...args: unknown[]) => Promise<void>]> = [
         // Changelist management
-        ['gitChangelist.createChangelist', () => createChangelist(service)],
-        ['gitChangelist.deleteChangelist', (arg) => deleteChangelist(service, arg)],
-        ['gitChangelist.renameChangelist', (arg) => renameChangelist(service, arg)],
-        ['gitChangelist.setActiveChangelist', (arg) => setActiveChangelist(service, arg)],
+        ['smartChangelists.createChangelist', () => createChangelist(service)],
+        ['smartChangelists.deleteChangelist', (arg) => deleteChangelist(service, arg)],
+        ['smartChangelists.renameChangelist', (arg) => renameChangelist(service, arg)],
+        ['smartChangelists.setActiveChangelist', (arg) => setActiveChangelist(service, arg)],
 
         // Shelve/Unshelve operations
-        ['gitChangelist.shelveFile', (arg, ...args) => shelveFile(service, arg, args)],
-        ['gitChangelist.unshelveFile', (arg) => unshelveFile(service, arg)],
-        ['gitChangelist.unshelveAll', (arg) => unshelveAll(service, arg)],
-        ['gitChangelist.applyAndStage', (arg) => applyAndStage(service, arg)],
-        ['gitChangelist.applyAllAndStage', (arg) => applyAllAndStage(service, arg)],
-        ['gitChangelist.deleteShelvedFile', (arg) => deleteShelvedFile(service, arg)],
+        ['smartChangelists.shelveFile', (arg, ...args) => shelveFile(service, arg, args)],
+        ['smartChangelists.unshelveFile', (arg) => unshelveFile(service, arg)],
+        ['smartChangelists.unshelveAll', (arg) => unshelveAll(service, arg)],
+        ['smartChangelists.applyAndStage', (arg) => applyAndStage(service, arg)],
+        ['smartChangelists.applyAllAndStage', (arg) => applyAllAndStage(service, arg)],
+        ['smartChangelists.deleteShelvedFile', (arg) => deleteShelvedFile(service, arg)],
 
         // Commit operations
-        ['gitChangelist.commitChangelist', (arg) => commitChangelist(service, arg)],
-        ['gitChangelist.commitWorkingChanges', () => commitWorkingChanges(service)],
+        ['smartChangelists.commitChangelist', (arg) => commitChangelist(service, arg)],
+        ['smartChangelists.commitWorkingChanges', () => commitWorkingChanges(service)],
 
         // File operations
-        ['gitChangelist.openFile', (arg) => openFile(arg)],
-        ['gitChangelist.openDiff', (arg) => openDiff(arg)],
-        ['gitChangelist.previewShelved', (arg) => previewShelved(arg)],
-        ['gitChangelist.revertFile', (arg) => revertFile(service, arg)],
+        ['smartChangelists.openFile', (arg) => openFile(arg)],
+        ['smartChangelists.openDiff', (arg) => openDiff(arg)],
+        ['smartChangelists.previewShelved', (arg) => previewShelved(arg)],
+        ['smartChangelists.revertFile', (arg) => revertFile(service, arg)],
 
         // Chat integration
-        ['gitChangelist.addToChat', (arg) => addToChat(service, arg)],
-        ['gitChangelist.addWorkingFileToChat', (arg) => addWorkingFileToChat(arg)],
+        ['smartChangelists.addToChat', (arg) => addToChat(service, arg)],
+        ['smartChangelists.addWorkingFileToChat', (arg) => addWorkingFileToChat(arg)],
 
         // Version comparison
-        ['gitChangelist.compareWith', (arg) => compareWith(service, arg)],
-        ['gitChangelist.compareAllVersions', (arg) => compareAllVersions(service, arg)],
+        ['smartChangelists.compareWith', (arg) => compareWith(service, arg)],
+        ['smartChangelists.compareAllVersions', (arg) => compareAllVersions(service, arg)],
 
         // Other
-        ['gitChangelist.refreshAll', () => refreshAll(service)],
-        ['gitChangelist.exportChangelists', () => exportChangelists(service)],
-        ['gitChangelist.importChangelists', () => importChangelists(service)],
+        ['smartChangelists.refreshAll', () => refreshAll(service)],
+        ['smartChangelists.exportChangelists', () => exportChangelists(service)],
+        ['smartChangelists.importChangelists', () => importChangelists(service)],
 
         // Legacy command mapping
-        ['gitChangelist.moveToChangelist', (arg, ...args) => shelveFile(service, arg, args)],
+        ['smartChangelists.moveToChangelist', (arg, ...args) => shelveFile(service, arg, args)],
     ];
 
     for (const [commandId, handler] of commands) {
@@ -663,7 +663,7 @@ async function revertFile(service: ChangelistService, arg: unknown): Promise<voi
 
 /**
  * Add a snapshot to VS Code Chat (Copilot, etc.)
- * If saveSnapshotsToFile is enabled, uses the file from .gitchangelists/
+ * If saveSnapshotsToFile is enabled, uses the file from .smartchangelists/
  * Otherwise, creates a temporary file or uses the snapshot content directly
  */
 async function addToChat(service: ChangelistService, arg: unknown): Promise<void> {
@@ -684,7 +684,7 @@ async function addToChat(service: ChangelistService, arg: unknown): Promise<void
     let snapshotPath: string;
 
     if (config.saveSnapshotsToFile) {
-        // Use the file from .gitchangelists/
+        // Use the file from .smartchangelists/
         snapshotPath = service.getSnapshotFilePath(shelvedFile, changelist);
 
         // Check if file exists
@@ -695,7 +695,7 @@ async function addToChat(service: ChangelistService, arg: unknown): Promise<void
     } else {
         // Create a temporary file for the snapshot
         const workspaceRoot = getWorkspaceRoot()!;
-        const tempDir = path.join(workspaceRoot, '.gitchangelists', '.temp');
+        const tempDir = path.join(workspaceRoot, '.smartchangelists', '.temp');
         if (!fs.existsSync(tempDir)) {
             fs.mkdirSync(tempDir, { recursive: true });
         }
@@ -755,7 +755,7 @@ async function addWorkingFileToChat(arg: unknown): Promise<void> {
 async function compareWith(service: ChangelistService, arg: unknown): Promise<void> {
     const config = getConfig();
     if (!config.enableVersionComparison) {
-        showWarning('Version comparison is disabled. Enable it in settings: gitChangelists.enableVersionComparison');
+        showWarning('Version comparison is disabled. Enable it in settings: smartChangelists.enableVersionComparison');
         return;
     }
 
@@ -873,7 +873,7 @@ async function compareWith(service: ChangelistService, arg: unknown): Promise<vo
 async function compareAllVersions(service: ChangelistService, arg: unknown): Promise<void> {
     const config = getConfig();
     if (!config.enableVersionComparison) {
-        showWarning('Version comparison is disabled. Enable it in settings: gitChangelists.enableVersionComparison');
+        showWarning('Version comparison is disabled. Enable it in settings: smartChangelists.enableVersionComparison');
         return;
     }
 
@@ -1127,6 +1127,6 @@ function getLanguageId(filePath: string): string {
 }
 
 export function deactivate(): void {
-    log('Deactivating Git Changelists extension');
-    vscode.commands.executeCommand('setContext', 'gitChangelists.enabled', false);
+    log('Deactivating Smart Changelists extension');
+    vscode.commands.executeCommand('setContext', 'smartChangelists.enabled', false);
 }

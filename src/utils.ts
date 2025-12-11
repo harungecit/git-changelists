@@ -85,7 +85,7 @@ export function mapGitStatus(index: string, workingDir: string): GitFileStatus {
  * Get extension configuration
  */
 export function getConfig(): ChangelistConfig {
-    const config = vscode.workspace.getConfiguration('gitChangelists');
+    const config = vscode.workspace.getConfiguration('smartChangelists');
     return {
         showEmptyChangelists: config.get('showEmptyChangelists', true),
         autoRefreshOnSave: config.get('autoRefreshOnSave', true),
@@ -100,21 +100,21 @@ export function getConfig(): ChangelistConfig {
  * Show error message with optional actions
  */
 export async function showError(message: string, ...actions: string[]): Promise<string | undefined> {
-    return vscode.window.showErrorMessage(`Git Changelists: ${message}`, ...actions);
+    return vscode.window.showErrorMessage(`Smart Changelists: ${message}`, ...actions);
 }
 
 /**
  * Show info message
  */
 export async function showInfo(message: string, ...actions: string[]): Promise<string | undefined> {
-    return vscode.window.showInformationMessage(`Git Changelists: ${message}`, ...actions);
+    return vscode.window.showInformationMessage(`Smart Changelists: ${message}`, ...actions);
 }
 
 /**
  * Show warning message
  */
 export async function showWarning(message: string, ...actions: string[]): Promise<string | undefined> {
-    return vscode.window.showWarningMessage(`Git Changelists: ${message}`, ...actions);
+    return vscode.window.showWarningMessage(`Smart Changelists: ${message}`, ...actions);
 }
 
 /**
