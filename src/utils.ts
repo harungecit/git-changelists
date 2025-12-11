@@ -91,7 +91,8 @@ export function getConfig(): ChangelistConfig {
         autoRefreshOnSave: config.get('autoRefreshOnSave', true),
         confirmBeforeCommit: config.get('confirmBeforeCommit', true),
         confirmBeforeRevert: config.get('confirmBeforeRevert', true),
-        saveSnapshotsToFile: config.get('saveSnapshotsToFile', false)
+        saveSnapshotsToFile: config.get('saveSnapshotsToFile', false),
+        enableVersionComparison: config.get('enableVersionComparison', false)
     };
 }
 

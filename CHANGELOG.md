@@ -37,6 +37,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Optional file-based snapshots in `.gitchangelists/` folder for CLI tool access
 - Compatible with Claude Code, Gemini Code, and other AI coding assistants
 
+**Version Comparison (Experimental)**
+- Compare with... - Compare snapshot with HEAD, Working file, or other snapshots
+- Compare All Versions - Select any two versions of the same file to compare
+- Config-controlled feature (disabled by default)
+
 **Other**
 - Export/Import changelists as JSON
 - Auto-refresh on file save
@@ -50,6 +55,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `confirmBeforeCommit` - Confirmation before commit
   - `confirmBeforeRevert` - Confirmation before revert
   - `saveSnapshotsToFile` - Save snapshots to files for CLI tools
+  - `enableVersionComparison` - Enable multi-version comparison features (experimental)
 
 ### Technical Details
 - State version: 3

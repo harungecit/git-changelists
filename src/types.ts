@@ -121,6 +121,17 @@ export interface ChangelistConfig {
     confirmBeforeCommit: boolean;
     confirmBeforeRevert: boolean;
     saveSnapshotsToFile: boolean;
+    enableVersionComparison: boolean;
+}
+
+/**
+ * Represents a version of a file across changelists
+ */
+export interface FileVersion {
+    changelist: Changelist;
+    shelvedFile: ShelvedFile;
+    label: string;
+    timestamp: number;
 }
 
 /**

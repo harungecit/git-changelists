@@ -127,7 +127,29 @@ Enable `saveSnapshotsToFile` setting to save snapshots as real files in `.gitcha
 | `gitChangelists.autoRefreshOnSave` | Auto-refresh when files are saved | `true` |
 | `gitChangelists.confirmBeforeCommit` | Show confirmation before committing | `true` |
 | `gitChangelists.confirmBeforeRevert` | Show confirmation before reverting | `true` |
-| `gitChangelists.saveSnapshotsToFile` | Save snapshots to `.gitchangelists/` folder for CLI tools | `false` |
+| `gitChangelists.saveSnapshotsToFile` | Save snapshots to `.gitchangelists/` for CLI tools | `false` |
+| `gitChangelists.enableVersionComparison` | Enable version comparison features | `false` |
+
+## Version Comparison (Experimental)
+
+Compare multiple versions of the same file across different changelists.
+
+### Enable Feature
+1. Open Settings (`Ctrl+,`)
+2. Search for "Git Changelists"
+3. Enable **"Enable Version Comparison"**
+
+### Features
+- **Compare with...** - Compare snapshot with HEAD, Working file, or other snapshots
+- **Compare All Versions** - Select any two versions to compare side-by-side
+
+### How to Use
+1. Right-click a snapshot in any changelist
+2. Select **"Compare with..."** to compare with:
+   - HEAD (latest committed version)
+   - Working (current file in working directory)
+   - Other snapshots of the same file
+3. Or select **"Compare All Versions"** to pick any two versions
 
 ## How It Works
 

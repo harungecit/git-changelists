@@ -8,7 +8,8 @@ import {
     ChangedFile,
     ShelvedFile,
     ChangelistExport,
-    GitFileStatus
+    GitFileStatus,
+    FileVersion
 } from './types';
 import {
     generateId,
@@ -348,6 +349,31 @@ export class ChangelistService implements vscode.Disposable {
         const changelist = this.getChangelist(changelistId);
         if (!changelist) return [];
         return changelist.shelvedFiles;
+    }
+
+    /**
+     * Get all versions of a specific file across all changelists.
+     * Returns versions sorted by timestamp (newest first).
+     */
+    public getFileVersions(relativePath: string): FileVersion[] {
+        const versions: FileVersion[] = [];
+        const normalizedPath = normalizePath(relativePath);
+
+        for (const changelist of this.state.changelists) {
+            for (const shelvedFile of changelist.shelvedFiles) {
+                if (normalizePath(shelvedFile.relativePath) === normalizedPath) {
+                    versions.push({
+                        changelist,
+                        shelvedFile,
+                        label: changelist.label,
+                        timestamp: shelvedFile.shelvedAt
+                    });
+                }
+            }
+        }
+
+        // Sort by timestamp (newest first)
+        return versions.sort((a, b) => b.timestamp - a.timestamp);
     }
 
     // ========== Shelve/Unshelve Operations ==========

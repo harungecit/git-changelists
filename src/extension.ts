@@ -97,6 +97,10 @@ function registerCommands(
         ['gitChangelist.addToChat', (arg) => addToChat(service, arg)],
         ['gitChangelist.addWorkingFileToChat', (arg) => addWorkingFileToChat(arg)],
 
+        // Version comparison
+        ['gitChangelist.compareWith', (arg) => compareWith(service, arg)],
+        ['gitChangelist.compareAllVersions', (arg) => compareAllVersions(service, arg)],
+
         // Other
         ['gitChangelist.refreshAll', () => refreshAll(service)],
         ['gitChangelist.exportChangelists', () => exportChangelists(service)],
@@ -740,6 +744,202 @@ async function addWorkingFileToChat(arg: unknown): Promise<void> {
     } catch {
         await vscode.env.clipboard.writeText(absolutePath);
         showInfo(`File path copied to clipboard: ${absolutePath}`);
+    }
+}
+
+// ========== Version Comparison ==========
+
+/**
+ * Compare a snapshot with another version (HEAD, Working, or other snapshot)
+ */
+async function compareWith(service: ChangelistService, arg: unknown): Promise<void> {
+    const config = getConfig();
+    if (!config.enableVersionComparison) {
+        showWarning('Version comparison is disabled. Enable it in settings: gitChangelists.enableVersionComparison');
+        return;
+    }
+
+    const { shelvedFile, changelistId } = getShelvedFileInfoFromArg(arg);
+
+    if (!shelvedFile || !changelistId) {
+        showWarning('No snapshot selected');
+        return;
+    }
+
+    const currentChangelist = service.getChangelist(changelistId);
+    if (!currentChangelist) {
+        showError('Changelist not found');
+        return;
+    }
+
+    // Get all versions of this file
+    const allVersions = service.getFileVersions(shelvedFile.relativePath);
+
+    // Build QuickPick items
+    const items: Array<vscode.QuickPickItem & { type: string; version?: typeof allVersions[0] }> = [];
+
+    // Add HEAD option
+    items.push({
+        label: '$(git-commit) HEAD',
+        description: 'Latest committed version',
+        type: 'head'
+    });
+
+    // Add Working option (if file exists)
+    const workingPath = toAbsolutePath(shelvedFile.relativePath);
+    if (fs.existsSync(workingPath)) {
+        items.push({
+            label: '$(file) Working',
+            description: 'Current working directory version',
+            type: 'working'
+        });
+    }
+
+    // Add separator
+    if (allVersions.length > 1) {
+        items.push({
+            label: 'Other Snapshots',
+            kind: vscode.QuickPickItemKind.Separator,
+            type: 'separator'
+        });
+    }
+
+    // Add other snapshots (exclude current)
+    for (const version of allVersions) {
+        if (version.changelist.id === changelistId && version.timestamp === shelvedFile.shelvedAt) {
+            continue; // Skip current snapshot
+        }
+        const date = new Date(version.timestamp).toLocaleString();
+        items.push({
+            label: `$(archive) ${version.label}`,
+            description: date,
+            type: 'snapshot',
+            version
+        });
+    }
+
+    const selected = await vscode.window.showQuickPick(items.filter(i => i.type !== 'separator'), {
+        placeHolder: `Compare "${currentChangelist.label}" snapshot with...`
+    });
+
+    if (!selected) return;
+
+    // Create URI for current snapshot (right side)
+    const currentSnapshotUri = createSnapshotUri(
+        shelvedFile.relativePath,
+        changelistId,
+        shelvedFile.originalContent || '',
+        shelvedFile.shelvedAt
+    );
+
+    let leftUri: vscode.Uri;
+    let leftLabel: string;
+
+    if (selected.type === 'head') {
+        leftUri = createGitUri(shelvedFile.relativePath, 'HEAD');
+        leftLabel = 'HEAD';
+    } else if (selected.type === 'working') {
+        leftUri = vscode.Uri.file(workingPath);
+        leftLabel = 'Working';
+    } else if (selected.type === 'snapshot' && selected.version) {
+        leftUri = createSnapshotUri(
+            selected.version.shelvedFile.relativePath,
+            selected.version.changelist.id,
+            selected.version.shelvedFile.originalContent || '',
+            selected.version.timestamp
+        );
+        leftLabel = selected.version.label;
+    } else {
+        return;
+    }
+
+    const fileName = path.basename(shelvedFile.relativePath);
+
+    try {
+        await vscode.commands.executeCommand(
+            'vscode.diff',
+            leftUri,
+            currentSnapshotUri,
+            `${fileName} (${leftLabel} ↔ ${currentChangelist.label})`
+        );
+    } catch (error) {
+        showError(`Failed to open diff: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+/**
+ * Compare all versions of a file (opens WebView panel)
+ */
+async function compareAllVersions(service: ChangelistService, arg: unknown): Promise<void> {
+    const config = getConfig();
+    if (!config.enableVersionComparison) {
+        showWarning('Version comparison is disabled. Enable it in settings: gitChangelists.enableVersionComparison');
+        return;
+    }
+
+    const { shelvedFile } = getShelvedFileInfoFromArg(arg);
+
+    if (!shelvedFile) {
+        showWarning('No snapshot selected');
+        return;
+    }
+
+    // Get all versions of this file
+    const allVersions = service.getFileVersions(shelvedFile.relativePath);
+
+    if (allVersions.length < 2) {
+        showInfo('Only one version exists. Use "Compare with..." to compare with HEAD or Working.');
+        return;
+    }
+
+    // For now, show a QuickPick to select two versions to compare
+    // TODO: In Phase 3, replace with WebView panel
+
+    const items = allVersions.map((v, index) => ({
+        label: `${index + 1}. ${v.label}`,
+        description: new Date(v.timestamp).toLocaleString(),
+        version: v
+    }));
+
+    // First selection
+    const first = await vscode.window.showQuickPick(items, {
+        placeHolder: 'Select first version to compare'
+    });
+    if (!first) return;
+
+    // Second selection (exclude first)
+    const remainingItems = items.filter(i => i.version !== first.version);
+    const second = await vscode.window.showQuickPick(remainingItems, {
+        placeHolder: 'Select second version to compare'
+    });
+    if (!second) return;
+
+    // Create diff
+    const firstUri = createSnapshotUri(
+        first.version.shelvedFile.relativePath,
+        first.version.changelist.id,
+        first.version.shelvedFile.originalContent || '',
+        first.version.timestamp
+    );
+
+    const secondUri = createSnapshotUri(
+        second.version.shelvedFile.relativePath,
+        second.version.changelist.id,
+        second.version.shelvedFile.originalContent || '',
+        second.version.timestamp
+    );
+
+    const fileName = path.basename(shelvedFile.relativePath);
+
+    try {
+        await vscode.commands.executeCommand(
+            'vscode.diff',
+            firstUri,
+            secondUri,
+            `${fileName} (${first.version.label} ↔ ${second.version.label})`
+        );
+    } catch (error) {
+        showError(`Failed to open diff: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 

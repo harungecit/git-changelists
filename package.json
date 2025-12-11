@@ -190,6 +190,18 @@
         "title": "Add to Chat",
         "icon": "$(comment-discussion)",
         "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.compareWith",
+        "title": "Compare with...",
+        "icon": "$(git-compare)",
+        "category": "Git Changelists"
+      },
+      {
+        "command": "gitChangelist.compareAllVersions",
+        "title": "Compare All Versions",
+        "icon": "$(versions)",
+        "category": "Git Changelists"
       }
     ],
     "menus": {
@@ -308,6 +320,16 @@
           "command": "gitChangelist.addWorkingFileToChat",
           "when": "view == gitChangelistsView && viewItem == working-file",
           "group": "2_file@2"
+        },
+        {
+          "command": "gitChangelist.compareWith",
+          "when": "view == gitChangelistsView && viewItem == shelved-file && config.gitChangelists.enableVersionComparison",
+          "group": "3_compare@1"
+        },
+        {
+          "command": "gitChangelist.compareAllVersions",
+          "when": "view == gitChangelistsView && viewItem == shelved-file && config.gitChangelists.enableVersionComparison",
+          "group": "3_compare@2"
         }
       ]
     },
@@ -338,6 +360,11 @@
           "type": "boolean",
           "default": false,
           "description": "Save snapshots as files to .gitchangelists/ folder for CLI tool access (Claude Code, Gemini, etc.)"
+        },
+        "gitChangelists.enableVersionComparison": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable multi-version comparison and merge features (experimental)"
         }
       }
     },
