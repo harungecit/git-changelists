@@ -1,7 +1,7 @@
 # Smart Changelists
 
 <p align="center">
-  <img src="resources/icon.png" alt="Smart Changelists Logo" width="128" height="128">
+  <img src="resources/icon-black.png" alt="Smart Changelists Logo" width="128" height="128">
 </p>
 
 <p align="center">
@@ -45,7 +45,7 @@
 1. Download the latest `.vsix` file from [GitHub Releases](https://github.com/harungecit/smart-changelists/releases)
 2. Install via command line:
 ```bash
-code --install-extension smart-changelists-1.1.1.vsix
+code --install-extension smart-changelists-1.1.2.vsix
 ```
 
 ## Quick Start

@@ -1,5 +1,14 @@
 # Changelogs
 
+## [1.1.2] - 2025-12-12
+
+### Changed
+- New simplified icon design for better visibility in Activity Bar
+- Separate icons for Marketplace (black) and Activity Bar (white/monochrome)
+- Removed unused icon variants for smaller package size
+
+---
+
 ## [1.1.1] - 2025-12-11
 
 ### Changed

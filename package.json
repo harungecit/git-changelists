@@ -2,7 +2,7 @@
   "name": "smart-changelists",
   "displayName": "Smart Changelists",
   "description": "IntelliJ-style changelists for VS Code. Save snapshots of your changes, switch between versions, and commit selectively.",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "publisher": "harungecit",
   "author": {
     "name": "Harun Geçit",
@@ -26,7 +26,7 @@
     "source control",
     "scm"
   ],
-  "icon": "resources/icon.png",
+  "icon": "resources/icon-black.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/harungecit/smart-changelists"
@@ -45,7 +45,7 @@
         {
           "id": "smartChangelists",
           "title": "Smart Changelists",
-          "icon": "resources/icon.png"
+          "icon": "resources/icon-white.png"
         }
       ]
     },
@@ -396,10 +396,10 @@
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
+    "@vscode/vsce": "^2.22.0",
     "esbuild": "^0.19.8",
     "eslint": "^8.55.0",
-    "typescript": "^5.3.2",
-    "@vscode/vsce": "^2.22.0"
+    "typescript": "^5.3.2"
   },
   "dependencies": {
     "simple-git": "^3.21.0"
