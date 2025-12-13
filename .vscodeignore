@@ -1,13 +1,17 @@
 .vscode/**
 .vscode-test/**
 src/**
+out/**
 node_modules/**
+.github/**
 .gitignore
 .eslintrc.json
 *.map
 *.ts
 tsconfig.json
+tsconfig.test.json
 esbuild.config.js
 **/*.md
 !README.md
 .gitchangelists/**
+.smartchangelists/**

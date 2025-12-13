@@ -1,5 +1,29 @@
+# Dependencies
 node_modules/
+
+# Build outputs
 dist/
+out/
+
+# Package
 *.vsix
+
+# Test
 .vscode-test/
-.gitchangelists/**
+
+# Extension data
+.gitchangelists/
+.smartchangelists/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*

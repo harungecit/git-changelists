@@ -1,0 +1,100 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Build extension
+        run: npm run build
+
+      - name: Run tests
+        uses: coactions/setup-xvfb@v1
+        with:
+          run: npm test
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension
+        run: npm run build
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Package extension
+        run: npx vsce package
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: '*.vsix'
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          name: Smart Changelists v${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## Smart Changelists v${{ steps.get_version.outputs.VERSION }}
+
+            ### Installation
+
+            **VS Code Marketplace:**
+            1. Open VS Code
+            2. Go to Extensions (`Ctrl+Shift+X`)
+            3. Search for "Smart Changelists"
+            4. Click Install
+
+            **Manual Installation:**
+            ```bash
+            code --install-extension smart-changelists-${{ steps.get_version.outputs.VERSION }}.vsix
+            ```
+
+            ---
+
+            See [CHANGELOG.md](https://github.com/harungecit/smart-changelists/blob/main/CHANGELOG.md) for detailed changes.
+
+      - name: Publish to VS Code Marketplace
+        run: npx vsce publish --pat ${{ secrets.VSCE_PAT }}
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Publish to Open VSX Registry
+        run: npx ovsx publish --pat ${{ secrets.OVSX_PAT }} || true
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}

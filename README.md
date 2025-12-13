@@ -1,11 +1,11 @@
 # Smart Changelists
 
 <p align="center">
-  <img src="resources/icon-black.png" alt="Smart Changelists Logo" width="128" height="128">
+  <img src="resources/icon.png" alt="Smart Changelists Logo" width="256" height="256">
 </p>
 
 <p align="center">
-  <strong>IntelliJ-style changelists for VS Code</strong><br>
+  <strong>JetBrains-style changelists for VS Code</strong><br>
   Save snapshots of your changes, switch between versions, and commit selectively.
 </p>
 
@@ -13,6 +13,8 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=harungecit.smart-changelists"><img src="https://img.shields.io/visual-studio-marketplace/v/harungecit.smart-changelists?style=flat-square&label=Marketplace" alt="VS Code Marketplace"></a>
   &nbsp;
   <a href="https://github.com/harungecit/smart-changelists/releases"><img src="https://img.shields.io/github/v/release/harungecit/smart-changelists?style=flat-square&label=Release" alt="GitHub Release"></a>
+  &nbsp;
+  <a href="https://github.com/harungecit/smart-changelists/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/harungecit/smart-changelists/ci.yml?style=flat-square&label=CI" alt="CI Status"></a>
   &nbsp;
   <a href="https://www.apache.org/licenses/LICENSE-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square" alt="License"></a>
 </p>
@@ -45,13 +47,13 @@
 1. Download the latest `.vsix` file from [GitHub Releases](https://github.com/harungecit/smart-changelists/releases)
 2. Install via command line:
 ```bash
-code --install-extension smart-changelists-1.1.2.vsix
+code --install-extension smart-changelists-x.x.x.vsix
 ```
 
 ## Quick Start
 
 1. **Make changes** to your files as usual
-2. **Open Git Changelists** panel from the Activity Bar (left sidebar)
+2. **Open Smart Changelists** panel from the Activity Bar (left sidebar)
 3. **Right-click** a file under "Working Changes"
 4. **Select "Shelve to Changelist..."** and choose a changelist
 5. **Continue editing** - your file stays as-is!
@@ -132,7 +134,7 @@ Compare multiple versions of the same file across different changelists.
 
 ### Enable Feature
 1. Open Settings (`Ctrl+,`)
-2. Search for "Git Changelists"
+2. Search for "Smart Changelists"
 3. Enable **"Enable Version Comparison"**
 
 ### Features
@@ -149,7 +151,7 @@ Compare multiple versions of the same file across different changelists.
 
 ## How It Works
 
-Unlike traditional shelve/stash systems that store diffs, Git Changelists saves **complete file content** for each snapshot:
+Unlike traditional shelve/stash systems that store diffs, Smart Changelists saves **complete file content** for each snapshot:
 
 - **No Corruption** - Snapshots are independent of HEAD changes
 - **Multiple Versions** - Same file can exist in different changelists with different content

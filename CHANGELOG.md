@@ -1,4 +1,24 @@
-# Changelogs
+# Changelog
+
+## [1.1.3] - 2025-12-13
+
+### Added
+- **GitHub Actions CI/CD** - Automated testing and release workflows
+- **Unit Tests** - Test infrastructure with Mocha and @vscode/test-electron
+- **Multi-platform CI** - Tests run on Ubuntu, Windows, and macOS
+
+### Changed
+- Improved icon design for better visibility
+- Updated extension description to "JetBrains-style changelists"
+- Added more keywords for better discoverability (phpstorm, webstorm, shelve, etc.)
+
+### Technical
+- Added `.github/workflows/ci.yml` for continuous integration
+- Added `.github/workflows/release.yml` for automated releases
+- Added ESLint configuration
+- Node.js 22 support
+
+---
 
 ## [1.1.2] - 2025-12-12
 
