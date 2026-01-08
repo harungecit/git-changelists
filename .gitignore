@@ -27,3 +27,6 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Claude Code (development only - lives in develop branch)
+.claude/
