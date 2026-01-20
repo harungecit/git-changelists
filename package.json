@@ -2,7 +2,7 @@
   "name": "smart-changelists",
   "displayName": "Smart Changelists",
   "description": "JetBrains-style changelists for VS Code. Save snapshots of your changes, switch between versions, and commit selectively.",
-  "version": "1.2.0",
+  "version": "2.0.1",
   "publisher": "harungecit",
   "author": {
     "name": "Harun Geçit",
@@ -45,7 +45,8 @@
     "url": "https://github.com/harungecit/smart-changelists/issues"
   },
   "activationEvents": [
-    "workspaceContains:.git"
+    "workspaceContains:.git",
+    "onView:smartChangelistsView"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -63,7 +64,6 @@
         {
           "id": "smartChangelistsView",
           "name": "Changelists",
-          "when": "smartChangelists.enabled",
           "contextualTitle": "Smart Changelists"
         }
       ]

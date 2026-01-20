@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { ChangelistConfig, GitFileStatus } from './types';
+import * as fs from 'fs';
+import * as crypto from 'crypto';
+import { ChangelistConfig, GitFileStatus, GitRepository } from './types';
 
 /**
  * Generate a unique ID for changelists
@@ -239,4 +241,152 @@ export function log(message: string, level: 'info' | 'warn' | 'error' = 'info'):
     if (level === 'error') {
         console.error(formattedMessage);
     }
+}
+
+// ========== Multi-Repository Utilities ==========
+
+/**
+ * Get all workspace folders
+ */
+export function getAllWorkspaceFolders(): vscode.WorkspaceFolder[] {
+    return vscode.workspace.workspaceFolders || [];
+}
+
+/**
+ * Check if a directory contains a .git folder
+ */
+export function hasGitDir(dirPath: string): boolean {
+    const gitPath = path.join(dirPath, '.git');
+    return fs.existsSync(gitPath);
+}
+
+/**
+ * Check if a .git path is a file (submodule) or directory (regular repo)
+ */
+export function isGitSubmodule(dirPath: string): boolean {
+    const gitPath = path.join(dirPath, '.git');
+    if (!fs.existsSync(gitPath)) return false;
+
+    const stats = fs.statSync(gitPath);
+    return stats.isFile(); // Submodules have .git as a file pointing to the parent's .git
+}
+
+/**
+ * Find all git repositories in a directory (including nested repos/submodules)
+ */
+export function findGitRepositories(rootPath: string, parentRepoPath?: string): GitRepository[] {
+    const repos: GitRepository[] = [];
+
+    // Check if the root itself is a git repo
+    if (hasGitDir(rootPath)) {
+        const isSubmodule = isGitSubmodule(rootPath);
+        repos.push({
+            path: rootPath,
+            name: path.basename(rootPath),
+            isSubmodule,
+            parentRepoPath
+        });
+
+        // Look for submodules/nested repos inside
+        findNestedRepos(rootPath, rootPath, repos);
+    }
+
+    return repos;
+}
+
+/**
+ * Recursively find nested git repositories (submodules)
+ */
+function findNestedRepos(searchPath: string, parentRepoPath: string, repos: GitRepository[]): void {
+    try {
+        const entries = fs.readdirSync(searchPath, { withFileTypes: true });
+
+        for (const entry of entries) {
+            // Skip .git directory, node_modules, and other common directories
+            if (entry.name === '.git' ||
+                entry.name === 'node_modules' ||
+                entry.name === '.smartchangelists' ||
+                entry.name === 'vendor' ||
+                entry.name === 'dist' ||
+                entry.name === 'build') {
+                continue;
+            }
+
+            if (entry.isDirectory()) {
+                const fullPath = path.join(searchPath, entry.name);
+
+                // Check if this directory is a git repo
+                if (hasGitDir(fullPath)) {
+                    const isSubmodule = isGitSubmodule(fullPath);
+                    repos.push({
+                        path: fullPath,
+                        name: entry.name,
+                        isSubmodule,
+                        parentRepoPath
+                    });
+
+                    // Recursively search inside for nested repos
+                    findNestedRepos(fullPath, fullPath, repos);
+                } else {
+                    // Not a git repo, continue searching deeper (but limit depth)
+                    const depth = fullPath.split(path.sep).length - parentRepoPath.split(path.sep).length;
+                    if (depth < 5) { // Limit recursion depth
+                        findNestedRepos(fullPath, parentRepoPath, repos);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        // Ignore permission errors and continue
+        log(`Error scanning ${searchPath}: ${error}`, 'warn');
+    }
+}
+
+/**
+ * Find the git repository that contains a given file
+ */
+export function getRepoForFile(filePath: string, repositories: GitRepository[]): GitRepository | undefined {
+    const normalizedFilePath = normalizePath(path.resolve(filePath));
+
+    // Sort repositories by path length (descending) to find the most specific match
+    const sortedRepos = [...repositories].sort((a, b) => b.path.length - a.path.length);
+
+    for (const repo of sortedRepos) {
+        const normalizedRepoPath = normalizePath(path.resolve(repo.path));
+        if (normalizedFilePath.startsWith(normalizedRepoPath + '/') ||
+            normalizedFilePath === normalizedRepoPath) {
+            return repo;
+        }
+    }
+
+    return undefined;
+}
+
+/**
+ * Get relative path from a repository root
+ */
+export function getRelativePathFromRepo(filePath: string, repoPath: string): string {
+    return path.relative(repoPath, filePath).replace(/\\/g, '/');
+}
+
+/**
+ * Get absolute path from a repository-relative path
+ */
+export function getAbsolutePathFromRepo(relativePath: string, repoPath: string): string {
+    return path.join(repoPath, relativePath);
+}
+
+/**
+ * Generate a unique hash for a repository path (for state key)
+ */
+export function getRepoHash(repoPath: string): string {
+    const normalizedPath = normalizePath(path.resolve(repoPath));
+    return crypto.createHash('md5').update(normalizedPath).digest('hex').substring(0, 8);
+}
+
+/**
+ * Get the state key for a repository
+ */
+export function getRepoStateKey(repoPath: string): string {
+    return `smartChangelists.state.${getRepoHash(repoPath)}`;
 }

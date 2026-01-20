@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import simpleGit, { SimpleGit } from 'simple-git';
-import { getWorkspaceRoot, log } from './utils';
+import { log, getWorkspaceRoot } from './utils';
 
 /**
  * URI scheme for our git content provider
@@ -11,41 +11,53 @@ export const SNAPSHOT_SCHEME = 'gitcl-snapshot';
 // In-memory storage for snapshot content
 const snapshotContent: Map<string, string> = new Map();
 
+// Cache of git instances per repository
+const gitInstances: Map<string, SimpleGit> = new Map();
+
 /**
- * Content provider for showing original file content from Git HEAD
+ * Get or create a git instance for a repository
+ */
+function getGitInstance(repoPath: string): SimpleGit {
+    if (!gitInstances.has(repoPath)) {
+        gitInstances.set(repoPath, simpleGit(repoPath));
+    }
+    return gitInstances.get(repoPath)!;
+}
+
+/**
+ * Content provider for showing original file content from Git HEAD.
+ * Supports multi-repo by including repoPath in the URI.
  */
 export class GitContentProvider implements vscode.TextDocumentContentProvider {
-    private git: SimpleGit | undefined;
     private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
 
     readonly onDidChange = this._onDidChange.event;
 
-    constructor() {
-        const workspaceRoot = getWorkspaceRoot();
-        if (workspaceRoot) {
-            this.git = simpleGit(workspaceRoot);
-        }
-    }
-
     /**
      * Provide content for a URI
-     * URI format: gitcl:relativePath?ref=HEAD
+     * URI format: gitcl:relativePath?ref=HEAD&repo=encodedRepoPath
      */
     async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
-        if (!this.git) {
-            throw new Error('Git not initialized');
-        }
-
         try {
-            // Parse the URI to get file path and ref
+            // Parse the URI to get file path, ref, and repo
             const relativePath = uri.path;
             const params = new URLSearchParams(uri.query);
             const ref = params.get('ref') || 'HEAD';
+            const repoPath = params.get('repo');
 
-            log(`Getting content for ${relativePath} at ${ref}`);
+            // Use provided repo path or fall back to workspace root
+            const gitRepoPath = repoPath ? decodeURIComponent(repoPath) : getWorkspaceRoot();
+
+            if (!gitRepoPath) {
+                throw new Error('No repository path available');
+            }
+
+            const git = getGitInstance(gitRepoPath);
+
+            log(`Getting content for ${relativePath} at ${ref} from ${gitRepoPath}`);
 
             // Get file content from git
-            const content = await this.git.show([`${ref}:${relativePath}`]);
+            const content = await git.show([`${ref}:${relativePath}`]);
             return content;
         } catch (error) {
             // File might be new (untracked), return empty content
@@ -63,6 +75,7 @@ export class GitContentProvider implements vscode.TextDocumentContentProvider {
 
     public dispose(): void {
         this._onDidChange.dispose();
+        gitInstances.clear();
     }
 }
 
@@ -93,18 +106,37 @@ export class SnapshotContentProvider implements vscode.TextDocumentContentProvid
 
 /**
  * Create a URI for viewing original git content
+ * @param relativePath - Path relative to repo root
+ * @param ref - Git reference (e.g., 'HEAD')
+ * @param repoPath - Optional repository path for multi-repo support
  */
-export function createGitUri(relativePath: string, ref: string = 'HEAD'): vscode.Uri {
-    return vscode.Uri.parse(`${GIT_CHANGELIST_SCHEME}:${relativePath}?ref=${ref}`);
+export function createGitUri(relativePath: string, ref: string = 'HEAD', repoPath?: string): vscode.Uri {
+    let query = `ref=${ref}`;
+    if (repoPath) {
+        query += `&repo=${encodeURIComponent(repoPath)}`;
+    }
+    return vscode.Uri.parse(`${GIT_CHANGELIST_SCHEME}:${relativePath}?${query}`);
 }
 
 /**
  * Create a URI for viewing snapshot content
  */
-export function createSnapshotUri(relativePath: string, changelistId: string, content: string, timestamp: number): vscode.Uri {
+export function createSnapshotUri(
+    relativePath: string,
+    changelistId: string,
+    content: string,
+    timestamp: number,
+    repoPath?: string
+): vscode.Uri {
     const id = `${changelistId}_${timestamp}`;
     snapshotContent.set(id, content);
-    return vscode.Uri.parse(`${SNAPSHOT_SCHEME}:${relativePath}?id=${encodeURIComponent(id)}`);
+
+    let query = `id=${encodeURIComponent(id)}`;
+    if (repoPath) {
+        query += `&repo=${encodeURIComponent(repoPath)}`;
+    }
+
+    return vscode.Uri.parse(`${SNAPSHOT_SCHEME}:${relativePath}?${query}`);
 }
 
 /**

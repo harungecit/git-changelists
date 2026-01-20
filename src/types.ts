@@ -1,6 +1,34 @@
 import * as vscode from 'vscode';
 
 /**
+ * Represents a Git repository in the workspace
+ */
+export interface GitRepository {
+    /** Absolute path to the repository root */
+    path: string;
+    /** Display name (folder name) */
+    name: string;
+    /** Whether this is a git submodule */
+    isSubmodule: boolean;
+    /** Parent repository path if this is a submodule */
+    parentRepoPath?: string;
+}
+
+/**
+ * State for a single repository
+ */
+export interface RepoState {
+    /** Path to the repository */
+    repoPath: string;
+    /** Display name of the repository */
+    repoName: string;
+    /** Changelists for this repository */
+    changelists: Changelist[];
+    /** ID of the active changelist */
+    activeChangelistId: string;
+}
+
+/**
  * Git file status types
  */
 export type GitFileStatus =
@@ -19,19 +47,21 @@ export type GitFileStatus =
 export interface ChangedFile {
     /** Absolute path to the file */
     absolutePath: string;
-    /** Relative path from workspace root */
+    /** Relative path from workspace root (or repo root in multi-repo mode) */
     relativePath: string;
     /** Git status of the file */
     status: GitFileStatus;
     /** Original path (for renamed/copied files) */
     originalPath?: string;
+    /** Path to the repository this file belongs to (for multi-repo support) */
+    repoPath?: string;
 }
 
 /**
  * Represents a shelved file entry with its full content
  */
 export interface ShelvedFile {
-    /** Relative path from workspace root */
+    /** Relative path from workspace root (or repo root in multi-repo mode) */
     relativePath: string;
     /** Git status when shelved */
     status: GitFileStatus;
@@ -45,6 +75,8 @@ export interface ShelvedFile {
     shelvedAt: number;
     /** Original path (for renamed files) */
     originalPath?: string;
+    /** Path to the repository this file belongs to (for multi-repo support) */
+    repoPath?: string;
 }
 
 /**
@@ -61,6 +93,8 @@ export interface Changelist {
     isDefault: boolean;
     /** Whether this is the active changelist (new changes go here) */
     isActive: boolean;
+    /** Path to the repository this changelist belongs to (for multi-repo support) */
+    repoPath?: string;
 }
 
 /**

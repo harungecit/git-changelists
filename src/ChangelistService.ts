@@ -9,25 +9,27 @@ import {
     ShelvedFile,
     ChangelistExport,
     GitFileStatus,
-    FileVersion
+    FileVersion,
+    GitRepository
 } from './types';
 import {
     generateId,
     getWorkspaceRoot,
-    toRelativePath,
-    toAbsolutePath,
     mapGitStatus,
     getConfig,
     log,
-    normalizePath
+    normalizePath,
+    getRepoStateKey,
+    getAbsolutePathFromRepo
 } from './utils';
 
-const STATE_KEY = 'smartChangelists.state';
-const STATE_VERSION = 3; // Bumped for full-content shelving
+const LEGACY_STATE_KEY = 'smartChangelists.state';
+const STATE_VERSION = 4; // Bumped for multi-repo support
 const SNAPSHOTS_DIR = '.smartchangelists';
 
 /**
- * Service for managing changelists with shelve/unshelve functionality
+ * Service for managing changelists with shelve/unshelve functionality.
+ * Each instance manages changelists for a single git repository.
  */
 export class ChangelistService implements vscode.Disposable {
     private readonly _onDidChangeChangelists = new vscode.EventEmitter<void>();
@@ -41,7 +43,17 @@ export class ChangelistService implements vscode.Disposable {
     private changedFiles: Map<string, ChangedFile> = new Map();
     private disposables: vscode.Disposable[] = [];
 
-    constructor(private readonly context: vscode.ExtensionContext) {
+    /** Repository this service manages */
+    public readonly repository: GitRepository;
+    /** State key for this repository */
+    private readonly stateKey: string;
+
+    constructor(
+        private readonly context: vscode.ExtensionContext,
+        repository: GitRepository
+    ) {
+        this.repository = repository;
+        this.stateKey = getRepoStateKey(repository.path);
         this.state = this.loadState();
         this.initGit();
         this.setupWatchers();
@@ -52,10 +64,7 @@ export class ChangelistService implements vscode.Disposable {
         const config = getConfig();
         if (!config.saveSnapshotsToFile) return;
 
-        const workspaceRoot = getWorkspaceRoot();
-        if (!workspaceRoot) return;
-
-        const snapshotsDir = path.join(workspaceRoot, SNAPSHOTS_DIR);
+        const snapshotsDir = path.join(this.repository.path, SNAPSHOTS_DIR);
         if (!fs.existsSync(snapshotsDir)) {
             fs.mkdirSync(snapshotsDir, { recursive: true });
             // Add .gitignore to exclude snapshots from git
@@ -70,11 +79,10 @@ export class ChangelistService implements vscode.Disposable {
      * Format: .smartchangelists/{changelist-name}/{filename}
      */
     public getSnapshotFilePath(shelvedFile: ShelvedFile, changelist: Changelist): string {
-        const workspaceRoot = getWorkspaceRoot()!;
         // Sanitize changelist name for folder use
         const sanitizedName = changelist.label.replace(/[<>:"/\\|?*]/g, '_');
         const fileName = path.basename(shelvedFile.relativePath);
-        return path.join(workspaceRoot, SNAPSHOTS_DIR, sanitizedName, fileName);
+        return path.join(this.repository.path, SNAPSHOTS_DIR, sanitizedName, fileName);
     }
 
     /**
@@ -118,11 +126,8 @@ export class ChangelistService implements vscode.Disposable {
     }
 
     private initGit(): void {
-        const workspaceRoot = getWorkspaceRoot();
-        if (workspaceRoot) {
-            this.git = simpleGit(workspaceRoot);
-            log(`Git initialized at: ${workspaceRoot}`);
-        }
+        this.git = simpleGit(this.repository.path);
+        log(`Git initialized at: ${this.repository.path} (${this.repository.name})`);
     }
 
     private setupWatchers(): void {
@@ -151,11 +156,28 @@ export class ChangelistService implements vscode.Disposable {
     }
 
     private loadState(): ChangelistState {
-        const stored = this.context.workspaceState.get<ChangelistState>(STATE_KEY);
+        // Try to load repo-specific state
+        const stored = this.context.workspaceState.get<ChangelistState>(this.stateKey);
 
         if (stored && stored.version === STATE_VERSION) {
-            log('State loaded from workspaceState');
+            log(`State loaded from workspaceState for ${this.repository.name}`);
             return stored;
+        }
+
+        // Try migration from legacy state (single-repo format)
+        const migratedState = this.tryMigrateLegacyState();
+        if (migratedState) {
+            log(`Migrated legacy state to repo-specific state for ${this.repository.name}`);
+            this.saveState(migratedState);
+            return migratedState;
+        }
+
+        // Try migration from older version of repo-specific state
+        if (stored && stored.version < STATE_VERSION) {
+            const upgradedState = this.upgradeState(stored);
+            log(`Upgraded state from v${stored.version} to v${STATE_VERSION} for ${this.repository.name}`);
+            this.saveState(upgradedState);
+            return upgradedState;
         }
 
         // Initialize default state
@@ -169,20 +191,75 @@ export class ChangelistService implements vscode.Disposable {
                     label: 'Default Changelist',
                     shelvedFiles: [],
                     isDefault: true,
-                    isActive: true
+                    isActive: true,
+                    repoPath: this.repository.path
                 }
             ]
         };
 
-        log('Created default state');
+        log(`Created default state for ${this.repository.name}`);
         this.saveState(defaultState);
         return defaultState;
     }
 
+    /**
+     * Try to migrate legacy single-repo state to new multi-repo format.
+     * Only migrates if this is the first/primary workspace folder.
+     */
+    private tryMigrateLegacyState(): ChangelistState | null {
+        const legacyState = this.context.workspaceState.get<ChangelistState>(LEGACY_STATE_KEY);
+        if (!legacyState) return null;
+
+        // Only migrate if this is the workspace root (backward compat)
+        const workspaceRoot = getWorkspaceRoot();
+        if (!workspaceRoot || normalizePath(this.repository.path) !== normalizePath(workspaceRoot)) {
+            return null;
+        }
+
+        log(`Migrating legacy state to repo-specific format for ${this.repository.name}`);
+
+        // Add repoPath to all changelists and shelved files
+        const migratedChangelists = legacyState.changelists.map(cl => ({
+            ...cl,
+            repoPath: this.repository.path,
+            shelvedFiles: cl.shelvedFiles.map(sf => ({
+                ...sf,
+                repoPath: this.repository.path
+            }))
+        }));
+
+        return {
+            version: STATE_VERSION,
+            activeChangelistId: legacyState.activeChangelistId,
+            changelists: migratedChangelists
+        };
+    }
+
+    /**
+     * Upgrade state from older version
+     */
+    private upgradeState(oldState: ChangelistState): ChangelistState {
+        // Add repoPath to changelists if missing
+        const upgradedChangelists = oldState.changelists.map(cl => ({
+            ...cl,
+            repoPath: cl.repoPath || this.repository.path,
+            shelvedFiles: cl.shelvedFiles.map(sf => ({
+                ...sf,
+                repoPath: sf.repoPath || this.repository.path
+            }))
+        }));
+
+        return {
+            version: STATE_VERSION,
+            activeChangelistId: oldState.activeChangelistId,
+            changelists: upgradedChangelists
+        };
+    }
+
     private async saveState(state?: ChangelistState): Promise<void> {
         const stateToSave = state || this.state;
-        await this.context.workspaceState.update(STATE_KEY, stateToSave);
-        log('State saved');
+        await this.context.workspaceState.update(this.stateKey, stateToSave);
+        log(`State saved for ${this.repository.name}`);
     }
 
     public async refresh(): Promise<void> {
@@ -203,18 +280,17 @@ export class ChangelistService implements vscode.Disposable {
 
     private updateChangedFiles(status: StatusResult): void {
         this.changedFiles.clear();
-        const workspaceRoot = getWorkspaceRoot();
-        if (!workspaceRoot) return;
 
         const processFile = (filePath: string, gitStatus: GitFileStatus, originalPath?: string) => {
             const relativePath = normalizePath(filePath);
-            const absolutePath = toAbsolutePath(relativePath);
+            const absolutePath = getAbsolutePathFromRepo(relativePath, this.repository.path);
 
             this.changedFiles.set(relativePath, {
                 absolutePath,
                 relativePath,
                 status: gitStatus,
-                originalPath: originalPath ? normalizePath(originalPath) : undefined
+                originalPath: originalPath ? normalizePath(originalPath) : undefined,
+                repoPath: this.repository.path
             });
         };
 
@@ -264,14 +340,15 @@ export class ChangelistService implements vscode.Disposable {
             label,
             shelvedFiles: [],
             isDefault: false,
-            isActive: false
+            isActive: false,
+            repoPath: this.repository.path
         };
 
         this.state.changelists.push(changelist);
         await this.saveState();
         this._onDidChangeChangelists.fire();
 
-        log(`Created changelist: ${label}`);
+        log(`Created changelist: ${label} in ${this.repository.name}`);
         return changelist;
     }
 
@@ -403,7 +480,7 @@ export class ChangelistService implements vscode.Disposable {
             throw new Error('Cannot save to default changelist');
         }
 
-        const absolutePath = toAbsolutePath(normalizedPath);
+        const absolutePath = getAbsolutePathFromRepo(normalizedPath, this.repository.path);
 
         try {
             // Save the full current content of the file
@@ -440,7 +517,8 @@ export class ChangelistService implements vscode.Disposable {
                 originalContent: currentContent, // This is the saved version
                 headContent, // This is what HEAD has
                 shelvedAt: Date.now(),
-                originalPath: file.originalPath
+                originalPath: file.originalPath,
+                repoPath: this.repository.path
             };
 
             if (existingIndex >= 0) {
@@ -578,7 +656,9 @@ export class ChangelistService implements vscode.Disposable {
      * Internal unshelve logic - restores the shelved content directly
      */
     private async unshelveFileInternal(shelvedFile: ShelvedFile): Promise<void> {
-        const absolutePath = toAbsolutePath(shelvedFile.relativePath);
+        // Use shelved file's repo path if available, otherwise use this service's repo
+        const repoPath = shelvedFile.repoPath || this.repository.path;
+        const absolutePath = getAbsolutePathFromRepo(shelvedFile.relativePath, repoPath);
 
         try {
             if (shelvedFile.status === 'deleted') {
@@ -598,8 +678,7 @@ export class ChangelistService implements vscode.Disposable {
                 if (!this.git) {
                     throw new Error('Git not initialized');
                 }
-                const workspaceRoot = getWorkspaceRoot()!;
-                const patchPath = path.join(workspaceRoot, '.git', 'temp-patch.patch');
+                const patchPath = path.join(this.repository.path, '.git', 'temp-patch.patch');
                 fs.writeFileSync(patchPath, shelvedFile.patch, 'utf8');
 
                 try {
@@ -732,16 +811,18 @@ export class ChangelistService implements vscode.Disposable {
             throw new Error('Git not initialized');
         }
 
-        const file = this.changedFiles.get(normalizePath(relativePath));
+        const normalizedPath = normalizePath(relativePath);
+        const file = this.changedFiles.get(normalizedPath);
         if (!file) {
             throw new Error(`File not found: ${relativePath}`);
         }
 
         try {
             if (file.status === 'untracked') {
-                fs.unlinkSync(file.absolutePath);
+                const absolutePath = getAbsolutePathFromRepo(normalizedPath, this.repository.path);
+                fs.unlinkSync(absolutePath);
             } else {
-                await this.git.checkout(['--', relativePath]);
+                await this.git.checkout(['--', normalizedPath]);
             }
 
             log(`Reverted file: ${relativePath}`);

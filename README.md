@@ -27,6 +27,7 @@
 |---------|-------------|
 | **Snapshot System** | Save the current state of any file without reverting it |
 | **Multiple Versions** | Keep different versions of the same file in different changelists |
+| **Multi-Repository** | Full support for multi-root workspaces and nested git repos |
 | **Non-Destructive** | Your working file stays intact - keep editing after saving a snapshot |
 | **Diff Preview** | Click any snapshot to see a side-by-side diff with HEAD |
 | **Apply & Stage** | Apply a snapshot and stage it for commit in one click |
@@ -127,6 +128,51 @@ Enable `saveSnapshotsToFile` setting to save snapshots as real files in `.smartc
 | `smartChangelists.confirmBeforeRevert` | Show confirmation before reverting | `true` |
 | `smartChangelists.saveSnapshotsToFile` | Save snapshots to `.smartchangelists/` for CLI tools | `false` |
 | `smartChangelists.enableVersionComparison` | Enable version comparison features | `false` |
+
+## Multi-Repository Support
+
+Smart Changelists v2.0 introduces full support for multi-git repository workspaces.
+
+### Supported Scenarios
+
+| Scenario | Description |
+|----------|-------------|
+| **Multi-root Workspace** | Each folder with its own `.git` is handled independently |
+| **Nested Repositories** | Git repos inside other repos are auto-discovered |
+| **Submodules** | Git submodules are detected and managed separately |
+| **No Git** | Activity Bar panel shows "No Git Repository" message |
+
+### TreeView Structure
+
+**Single Repository** (backward compatible):
+```
+📁 SMART CHANGELISTS
+├── 📝 Working Changes
+│   └── 📄 src/index.ts [M]
+└── 📦 v1-snapshot
+    └── 📄 src/config.ts [M]
+```
+
+**Multiple Repositories**:
+```
+📁 SMART CHANGELISTS
+├── 📂 project-a (3 changes)
+│   ├── 📝 Working Changes (2)
+│   │   └── 📄 src/index.ts [M]
+│   └── 📦 v1-snapshot (1)
+│       └── 📄 src/config.ts [M]
+├── 📂 project-b (1 change)
+│   └── 📝 Working Changes (1)
+└── 📂 submodule (submodule)
+    └── 📝 Working Changes
+```
+
+### Notes
+- Each repository maintains its own changelists and snapshots
+- State is stored separately per repository
+- Existing single-repo changelists are automatically migrated
+
+---
 
 ## Version Comparison (Experimental)
 

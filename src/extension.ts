@@ -2,10 +2,10 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ChangelistService } from './ChangelistService';
-// SCM Provider removed - using only Tree View
-import { registerChangelistTreeView } from './ChangelistTreeProvider';
+import { RepositoryManager } from './RepositoryManager';
+import { ChangelistTreeProvider, registerChangelistTreeView } from './ChangelistTreeProvider';
 import { registerGitContentProvider, createGitUri, createSnapshotUri } from './GitContentProvider';
-import { ChangelistExport, ShelvedFile } from './types';
+import { ChangelistExport, ShelvedFile, GitRepository } from './types';
 import {
     getWorkspaceRoot,
     initLogger,
@@ -17,11 +17,15 @@ import {
     showError,
     showWarning,
     getConfig,
-    toAbsolutePath
+    getAbsolutePathFromRepo
 } from './utils';
 
-let service: ChangelistService | undefined;
+let repoManager: RepositoryManager | undefined;
+let treeProvider: ChangelistTreeProvider | undefined;
 let outputChannel: vscode.OutputChannel | undefined;
+
+// Map of repository path to service
+const services: Map<string, ChangelistService> = new Map();
 
 /**
  * Activate the extension
@@ -30,84 +34,199 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     outputChannel = vscode.window.createOutputChannel('Smart Changelists');
     initLogger(outputChannel);
 
-    log('Activating Smart Changelists extension');
+    log('Activating Smart Changelists extension v2.0.0');
 
-    const workspaceRoot = getWorkspaceRoot();
-    if (!workspaceRoot) {
-        log('No workspace folder found', 'warn');
-        return;
-    }
-
-    const gitDir = path.join(workspaceRoot, '.git');
-    if (!fs.existsSync(gitDir)) {
-        log('No .git directory found', 'warn');
-        return;
-    }
-
-    service = new ChangelistService(context);
-
-    // Only use Tree View - no SCM Provider, no extra decorations
-    registerChangelistTreeView(context, service);
-    registerGitContentProvider(context);
-
+    // Always enable the extension - Activity Bar should always be visible
     vscode.commands.executeCommand('setContext', 'smartChangelists.enabled', true);
 
-    registerCommands(context, service);
+    // Initialize repository manager
+    repoManager = new RepositoryManager();
+    await repoManager.initialize();
 
-    await service.refresh();
+    // Create tree provider
+    treeProvider = new ChangelistTreeProvider();
 
-    log('Smart Changelists extension activated');
+    // Create services for each repository
+    for (const repo of repoManager.getRepositories()) {
+        await createServiceForRepo(context, repo);
+    }
 
-    context.subscriptions.push(service, outputChannel!);
+    // Register tree view
+    registerChangelistTreeView(context, treeProvider);
+
+    // Register git content provider
+    registerGitContentProvider(context);
+
+    // Register commands
+    registerCommands(context);
+
+    // Listen for repository changes
+    repoManager.onDidChangeRepositories(async () => {
+        log('Repositories changed, updating services...');
+        await syncServicesWithRepos(context);
+        treeProvider?.refresh();
+    });
+
+    // Refresh all services
+    await refreshAllServices();
+
+    log(`Smart Changelists extension activated with ${services.size} repository(ies)`);
+
+    context.subscriptions.push(
+        repoManager,
+        outputChannel!,
+        { dispose: () => disposeAllServices() }
+    );
+}
+
+/**
+ * Create a service for a repository
+ */
+async function createServiceForRepo(context: vscode.ExtensionContext, repo: GitRepository): Promise<void> {
+    if (services.has(repo.path)) {
+        return; // Already exists
+    }
+
+    const service = new ChangelistService(context, repo);
+    services.set(repo.path, service);
+    treeProvider?.addService(service);
+
+    log(`Created service for repository: ${repo.name} at ${repo.path}`);
+}
+
+/**
+ * Sync services with current repositories
+ */
+async function syncServicesWithRepos(context: vscode.ExtensionContext): Promise<void> {
+    if (!repoManager) return;
+
+    const currentRepos = new Set(repoManager.getRepositories().map(r => r.path));
+
+    // Remove services for repos that no longer exist
+    for (const [repoPath, service] of services) {
+        if (!currentRepos.has(repoPath)) {
+            service.dispose();
+            services.delete(repoPath);
+            treeProvider?.removeService(repoPath);
+            log(`Removed service for repository: ${repoPath}`);
+        }
+    }
+
+    // Add services for new repos
+    for (const repo of repoManager.getRepositories()) {
+        if (!services.has(repo.path)) {
+            await createServiceForRepo(context, repo);
+        }
+    }
+}
+
+/**
+ * Refresh all services
+ */
+async function refreshAllServices(): Promise<void> {
+    for (const service of services.values()) {
+        await service.refresh();
+    }
+}
+
+/**
+ * Dispose all services
+ */
+function disposeAllServices(): void {
+    for (const service of services.values()) {
+        service.dispose();
+    }
+    services.clear();
+}
+
+/**
+ * Get the appropriate service for an argument (from tree item or command)
+ */
+function getServiceFromArg(arg: unknown): ChangelistService | undefined {
+    if (!arg || typeof arg !== 'object') {
+        // Return first service if only one repo
+        if (services.size === 1) {
+            return services.values().next().value;
+        }
+        return undefined;
+    }
+
+    const obj = arg as Record<string, unknown>;
+
+    // Try to get repoPath from the argument
+    let repoPath = obj.repoPath as string | undefined;
+
+    // Try to get from file
+    if (!repoPath && obj.file && typeof obj.file === 'object') {
+        repoPath = (obj.file as Record<string, unknown>).repoPath as string | undefined;
+    }
+
+    // Try to get from shelvedFile
+    if (!repoPath && obj.shelvedFile && typeof obj.shelvedFile === 'object') {
+        repoPath = (obj.shelvedFile as Record<string, unknown>).repoPath as string | undefined;
+    }
+
+    // Try to get from changelist
+    if (!repoPath && obj.changelist && typeof obj.changelist === 'object') {
+        repoPath = (obj.changelist as Record<string, unknown>).repoPath as string | undefined;
+    }
+
+    if (repoPath) {
+        return services.get(repoPath);
+    }
+
+    // Fall back to first service if only one repo
+    if (services.size === 1) {
+        return services.values().next().value;
+    }
+
+    return undefined;
 }
 
 /**
  * Register all extension commands
  */
-function registerCommands(
-    context: vscode.ExtensionContext,
-    service: ChangelistService
-): void {
+function registerCommands(context: vscode.ExtensionContext): void {
     const commands: Array<[string, (...args: unknown[]) => Promise<void>]> = [
         // Changelist management
-        ['smartChangelists.createChangelist', () => createChangelist(service)],
-        ['smartChangelists.deleteChangelist', (arg) => deleteChangelist(service, arg)],
-        ['smartChangelists.renameChangelist', (arg) => renameChangelist(service, arg)],
-        ['smartChangelists.setActiveChangelist', (arg) => setActiveChangelist(service, arg)],
+        ['smartChangelists.createChangelist', (arg) => createChangelist(arg)],
+        ['smartChangelists.deleteChangelist', (arg) => deleteChangelist(arg)],
+        ['smartChangelists.renameChangelist', (arg) => renameChangelist(arg)],
+        ['smartChangelists.setActiveChangelist', (arg) => setActiveChangelist(arg)],
 
         // Shelve/Unshelve operations
-        ['smartChangelists.shelveFile', (arg, ...args) => shelveFile(service, arg, args)],
-        ['smartChangelists.unshelveFile', (arg) => unshelveFile(service, arg)],
-        ['smartChangelists.unshelveAll', (arg) => unshelveAll(service, arg)],
-        ['smartChangelists.applyAndStage', (arg) => applyAndStage(service, arg)],
-        ['smartChangelists.applyAllAndStage', (arg) => applyAllAndStage(service, arg)],
-        ['smartChangelists.deleteShelvedFile', (arg, ...args) => deleteShelvedFile(service, arg, args)],
+        ['smartChangelists.shelveFile', (arg, ...args) => shelveFile(arg, args)],
+        ['smartChangelists.unshelveFile', (arg) => unshelveFile(arg)],
+        ['smartChangelists.unshelveAll', (arg) => unshelveAll(arg)],
+        ['smartChangelists.applyAndStage', (arg) => applyAndStage(arg)],
+        ['smartChangelists.applyAllAndStage', (arg) => applyAllAndStage(arg)],
+        ['smartChangelists.deleteShelvedFile', (arg, ...args) => deleteShelvedFile(arg, args)],
 
         // Commit operations
-        ['smartChangelists.commitChangelist', (arg) => commitChangelist(service, arg)],
-        ['smartChangelists.commitWorkingChanges', () => commitWorkingChanges(service)],
+        ['smartChangelists.commitChangelist', (arg) => commitChangelist(arg)],
+        ['smartChangelists.commitWorkingChanges', () => commitWorkingChanges()],
 
         // File operations
         ['smartChangelists.openFile', (arg) => openFile(arg)],
         ['smartChangelists.openDiff', (arg) => openDiff(arg)],
         ['smartChangelists.previewShelved', (arg) => previewShelved(arg)],
-        ['smartChangelists.revertFile', (arg) => revertFile(service, arg)],
+        ['smartChangelists.revertFile', (arg) => revertFile(arg)],
 
         // Chat integration
-        ['smartChangelists.addToChat', (arg) => addToChat(service, arg)],
+        ['smartChangelists.addToChat', (arg) => addToChat(arg)],
         ['smartChangelists.addWorkingFileToChat', (arg) => addWorkingFileToChat(arg)],
 
         // Version comparison
-        ['smartChangelists.compareWith', (arg) => compareWith(service, arg)],
-        ['smartChangelists.compareAllVersions', (arg) => compareAllVersions(service, arg)],
+        ['smartChangelists.compareWith', (arg) => compareWith(arg)],
+        ['smartChangelists.compareAllVersions', (arg) => compareAllVersions(arg)],
 
         // Other
-        ['smartChangelists.refreshAll', () => refreshAll(service)],
-        ['smartChangelists.exportChangelists', () => exportChangelists(service)],
-        ['smartChangelists.importChangelists', () => importChangelists(service)],
+        ['smartChangelists.refreshAll', () => refreshAll()],
+        ['smartChangelists.exportChangelists', () => exportChangelists()],
+        ['smartChangelists.importChangelists', () => importChangelists()],
 
         // Legacy command mapping
-        ['smartChangelists.moveToChangelist', (arg, ...args) => shelveFile(service, arg, args)],
+        ['smartChangelists.moveToChangelist', (arg, ...args) => shelveFile(arg, args)],
     ];
 
     for (const [commandId, handler] of commands) {
@@ -154,7 +273,19 @@ function generateChangelistNameSuggestion(service: ChangelistService): string {
     return `${lastName}2`;
 }
 
-async function createChangelist(service: ChangelistService): Promise<void> {
+async function createChangelist(arg: unknown): Promise<void> {
+    const service = getServiceFromArg(arg);
+    if (!service) {
+        // If multiple repos, ask user to select
+        if (services.size > 1) {
+            const selected = await selectRepository('Create changelist in which repository?');
+            if (!selected) return;
+            return createChangelist({ repoPath: selected.path });
+        }
+        showWarning('No git repository available');
+        return;
+    }
+
     const suggestion = generateChangelistNameSuggestion(service);
 
     const name = await vscode.window.showInputBox({
@@ -173,9 +304,24 @@ async function createChangelist(service: ChangelistService): Promise<void> {
     }
 }
 
-async function deleteChangelist(service: ChangelistService, arg: unknown): Promise<void> {
+async function deleteChangelist(arg: unknown): Promise<void> {
+    const service = getServiceFromArg(arg);
     const changelistId = getChangelistIdFromArg(arg);
-    if (!changelistId) {
+
+    if (!service && !changelistId) {
+        // Need to select a changelist from all repos
+        const { selectedService, selectedChangelist } = await selectChangelistFromAllRepos('Select changelist to delete');
+        if (!selectedService || !selectedChangelist) return;
+        return deleteChangelist({ repoPath: selectedService.repository.path, changelist: selectedChangelist });
+    }
+
+    if (!service) {
+        showError('Could not determine repository');
+        return;
+    }
+
+    let clId = changelistId;
+    if (!clId) {
         const changelists = service.getChangelists().filter(cl => !cl.isDefault);
         if (changelists.length === 0) {
             showWarning('No custom changelists to delete');
@@ -192,10 +338,10 @@ async function deleteChangelist(service: ChangelistService, arg: unknown): Promi
         );
 
         if (!selected || Array.isArray(selected)) return;
-        return deleteChangelist(service, { id: (selected as { id: string }).id });
+        clId = (selected as { id: string }).id;
     }
 
-    const changelist = service.getChangelist(changelistId);
+    const changelist = service.getChangelist(clId);
     if (!changelist) {
         showError('Changelist not found');
         return;
@@ -211,14 +357,27 @@ async function deleteChangelist(service: ChangelistService, arg: unknown): Promi
         : `Delete "${changelist.label}"?`;
 
     if (await promptConfirm(message)) {
-        await service.deleteChangelist(changelistId);
+        await service.deleteChangelist(clId);
         showInfo(`Deleted changelist: ${changelist.label}`);
     }
 }
 
-async function renameChangelist(service: ChangelistService, arg: unknown): Promise<void> {
+async function renameChangelist(arg: unknown): Promise<void> {
+    const service = getServiceFromArg(arg);
     const changelistId = getChangelistIdFromArg(arg);
-    if (!changelistId) {
+
+    if (!service) {
+        if (services.size > 1) {
+            const { selectedService, selectedChangelist } = await selectChangelistFromAllRepos('Select changelist to rename');
+            if (!selectedService || !selectedChangelist) return;
+            return renameChangelist({ repoPath: selectedService.repository.path, changelist: selectedChangelist });
+        }
+        showWarning('No git repository available');
+        return;
+    }
+
+    let clId = changelistId;
+    if (!clId) {
         const changelists = service.getChangelists();
         const selected = await promptSelect(
             changelists.map(cl => ({ label: cl.label, id: cl.id })),
@@ -226,10 +385,10 @@ async function renameChangelist(service: ChangelistService, arg: unknown): Promi
         );
 
         if (!selected || Array.isArray(selected)) return;
-        return renameChangelist(service, { id: (selected as { id: string }).id });
+        clId = (selected as { id: string }).id;
     }
 
-    const changelist = service.getChangelist(changelistId);
+    const changelist = service.getChangelist(clId);
     if (!changelist) {
         showError('Changelist not found');
         return;
@@ -245,14 +404,22 @@ async function renameChangelist(service: ChangelistService, arg: unknown): Promi
     });
 
     if (newName && newName.trim() !== changelist.label) {
-        await service.renameChangelist(changelistId, newName.trim());
+        await service.renameChangelist(clId, newName.trim());
         showInfo(`Renamed changelist to: ${newName}`);
     }
 }
 
-async function setActiveChangelist(service: ChangelistService, arg: unknown): Promise<void> {
+async function setActiveChangelist(arg: unknown): Promise<void> {
+    const service = getServiceFromArg(arg);
     const changelistId = getChangelistIdFromArg(arg);
-    if (!changelistId) {
+
+    if (!service) {
+        showWarning('No git repository available');
+        return;
+    }
+
+    let clId = changelistId;
+    if (!clId) {
         const changelists = service.getChangelists();
         const selected = await promptSelect(
             changelists.map(cl => ({
@@ -264,11 +431,11 @@ async function setActiveChangelist(service: ChangelistService, arg: unknown): Pr
         );
 
         if (!selected || Array.isArray(selected)) return;
-        return setActiveChangelist(service, { id: (selected as { id: string }).id });
+        clId = (selected as { id: string }).id;
     }
 
-    await service.setActiveChangelist(changelistId);
-    const changelist = service.getChangelist(changelistId);
+    await service.setActiveChangelist(clId);
+    const changelist = service.getChangelist(clId);
     if (changelist) {
         showInfo(`Active changelist: ${changelist.label}`);
     }
@@ -276,33 +443,37 @@ async function setActiveChangelist(service: ChangelistService, arg: unknown): Pr
 
 // ========== Shelve/Unshelve Operations ==========
 
-async function shelveFile(
-    service: ChangelistService,
-    arg: unknown,
-    additionalArgs: unknown[]
-): Promise<void> {
+async function shelveFile(arg: unknown, additionalArgs: unknown[]): Promise<void> {
+    const service = getServiceFromArg(arg);
     const files: string[] = [];
+    let repoPath: string | undefined;
 
     const extractFile = (item: unknown) => {
         if (!item) return;
         if (typeof item === 'object' && item !== null) {
             const obj = item as Record<string, unknown>;
+
+            // Extract repoPath if available
+            if (!repoPath && obj.repoPath) {
+                repoPath = obj.repoPath as string;
+            }
+
             if (obj.file && typeof obj.file === 'object') {
-                const file = obj.file as { relativePath?: string };
+                const file = obj.file as { relativePath?: string; repoPath?: string };
                 if (file.relativePath) {
                     files.push(file.relativePath);
+                    if (!repoPath && file.repoPath) {
+                        repoPath = file.repoPath;
+                    }
                     return;
                 }
             }
             if (obj.resourceUri && typeof obj.resourceUri === 'object') {
                 const uri = obj.resourceUri as { fsPath?: string };
-                if (uri.fsPath) {
-                    const workspaceRoot = getWorkspaceRoot();
-                    if (workspaceRoot) {
-                        const relativePath = path.relative(workspaceRoot, uri.fsPath).replace(/\\/g, '/');
-                        files.push(relativePath);
-                        return;
-                    }
+                if (uri.fsPath && repoPath) {
+                    const relativePath = path.relative(repoPath, uri.fsPath).replace(/\\/g, '/');
+                    files.push(relativePath);
+                    return;
                 }
             }
         }
@@ -313,20 +484,43 @@ async function shelveFile(
         (additionalArgs[0] as unknown[]).forEach(extractFile);
     }
 
+    // If no files from args, try to use active text editor (for command palette usage)
+    if (files.length === 0 && vscode.window.activeTextEditor) {
+        const activeDoc = vscode.window.activeTextEditor.document;
+        if (!activeDoc.isUntitled && repoManager) {
+            const repo = repoManager.getRepositoryForFile(activeDoc.uri.fsPath);
+            if (repo) {
+                const relativePath = path.relative(repo.path, activeDoc.uri.fsPath).replace(/\\/g, '/');
+                files.push(relativePath);
+                if (!repoPath) {
+                    repoPath = repo.path;
+                }
+            }
+        }
+    }
+
+    // Get the service for this repo
+    const targetService = repoPath ? services.get(repoPath) : service;
+
+    if (!targetService) {
+        showWarning('No git repository available');
+        return;
+    }
+
     if (files.length === 0) {
         showWarning('No files selected');
         return;
     }
 
     // Show changelist picker (only non-default)
-    const changelists = service.getChangelists().filter(cl => !cl.isDefault);
+    const changelists = targetService.getChangelists().filter(cl => !cl.isDefault);
 
     if (changelists.length === 0) {
         const create = await promptConfirm('No changelists found. Create a new one?');
         if (create) {
-            await createChangelist(service);
+            await createChangelist({ repoPath: targetService.repository.path });
             // Try again
-            return shelveFile(service, arg, additionalArgs);
+            return shelveFile(arg, additionalArgs);
         }
         return;
     }
@@ -344,17 +538,18 @@ async function shelveFile(
     if (!selected || Array.isArray(selected)) return;
 
     try {
-        await service.shelveFiles(files, (selected as { id: string }).id);
+        await targetService.shelveFiles(files, (selected as { id: string }).id);
         showInfo(`Shelved ${files.length} file(s) to ${(selected as { label: string }).label}`);
     } catch (error) {
         showError(`Shelve failed: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 
-async function unshelveFile(service: ChangelistService, arg: unknown): Promise<void> {
+async function unshelveFile(arg: unknown): Promise<void> {
+    const service = getServiceFromArg(arg);
     const { changelistId, relativePath } = getShelvedFileFromArg(arg);
 
-    if (!changelistId || !relativePath) {
+    if (!service || !changelistId || !relativePath) {
         showWarning('No shelved file selected');
         return;
     }
@@ -367,9 +562,11 @@ async function unshelveFile(service: ChangelistService, arg: unknown): Promise<v
     }
 }
 
-async function unshelveAll(service: ChangelistService, arg: unknown): Promise<void> {
+async function unshelveAll(arg: unknown): Promise<void> {
+    const service = getServiceFromArg(arg);
     const changelistId = getChangelistIdFromArg(arg);
-    if (!changelistId) {
+
+    if (!service || !changelistId) {
         showWarning('No changelist selected');
         return;
     }
@@ -399,18 +596,15 @@ async function unshelveAll(service: ChangelistService, arg: unknown): Promise<vo
     }
 }
 
-async function deleteShelvedFile(
-    service: ChangelistService,
-    arg: unknown,
-    additionalArgs: unknown[]
-): Promise<void> {
+async function deleteShelvedFile(arg: unknown, additionalArgs: unknown[]): Promise<void> {
     // Collect all selected files
-    const files: Array<{ changelistId: string; relativePath: string }> = [];
+    const files: Array<{ changelistId: string; relativePath: string; service: ChangelistService }> = [];
 
     const extractFile = (item: unknown) => {
+        const service = getServiceFromArg(item);
         const { changelistId, relativePath } = getShelvedFileFromArg(item);
-        if (changelistId && relativePath) {
-            files.push({ changelistId, relativePath });
+        if (service && changelistId && relativePath) {
+            files.push({ changelistId, relativePath, service });
         }
     };
 
@@ -438,7 +632,7 @@ async function deleteShelvedFile(
 
     // Delete all selected files
     for (const file of files) {
-        await service.deleteShelvedFile(file.changelistId, file.relativePath);
+        await file.service.deleteShelvedFile(file.changelistId, file.relativePath);
     }
 
     showInfo(
@@ -448,10 +642,11 @@ async function deleteShelvedFile(
     );
 }
 
-async function applyAndStage(service: ChangelistService, arg: unknown): Promise<void> {
+async function applyAndStage(arg: unknown): Promise<void> {
+    const service = getServiceFromArg(arg);
     const { changelistId, relativePath } = getShelvedFileFromArg(arg);
 
-    if (!changelistId || !relativePath) {
+    if (!service || !changelistId || !relativePath) {
         showWarning('No snapshot selected');
         return;
     }
@@ -464,9 +659,11 @@ async function applyAndStage(service: ChangelistService, arg: unknown): Promise<
     }
 }
 
-async function applyAllAndStage(service: ChangelistService, arg: unknown): Promise<void> {
+async function applyAllAndStage(arg: unknown): Promise<void> {
+    const service = getServiceFromArg(arg);
     const changelistId = getChangelistIdFromArg(arg);
-    if (!changelistId) {
+
+    if (!service || !changelistId) {
         showWarning('No changelist selected');
         return;
     }
@@ -498,9 +695,11 @@ async function applyAllAndStage(service: ChangelistService, arg: unknown): Promi
 
 // ========== Commit Operations ==========
 
-async function commitChangelist(service: ChangelistService, arg: unknown): Promise<void> {
+async function commitChangelist(arg: unknown): Promise<void> {
+    const service = getServiceFromArg(arg);
     const changelistId = getChangelistIdFromArg(arg);
-    if (!changelistId) {
+
+    if (!service || !changelistId) {
         showError('No changelist selected');
         return;
     }
@@ -548,7 +747,23 @@ async function commitChangelist(service: ChangelistService, arg: unknown): Promi
     }
 }
 
-async function commitWorkingChanges(service: ChangelistService): Promise<void> {
+async function commitWorkingChanges(): Promise<void> {
+    // If multiple repos, ask user to select
+    let service: ChangelistService | undefined;
+
+    if (services.size === 1) {
+        service = services.values().next().value;
+    } else if (services.size > 1) {
+        const selected = await selectRepository('Commit working changes from which repository?');
+        if (!selected) return;
+        service = services.get(selected.path);
+    }
+
+    if (!service) {
+        showWarning('No git repository available');
+        return;
+    }
+
     const files = service.getChangedFiles();
 
     if (files.length === 0) {
@@ -584,18 +799,32 @@ async function commitWorkingChanges(service: ChangelistService): Promise<void> {
 // ========== File Operations ==========
 
 async function openFile(arg: unknown): Promise<void> {
+    const service = getServiceFromArg(arg);
     const filePath = getFilePathFromArg(arg);
-    if (filePath) {
-        const uri = vscode.Uri.file(toAbsolutePath(filePath));
-        await vscode.window.showTextDocument(uri);
+
+    if (!filePath) {
+        showWarning('No file selected');
+        return;
     }
+
+    const repoPath = service?.repository.path || getWorkspaceRoot();
+    if (!repoPath) return;
+
+    const absolutePath = getAbsolutePathFromRepo(filePath, repoPath);
+    const uri = vscode.Uri.file(absolutePath);
+    await vscode.window.showTextDocument(uri);
 }
 
 async function openDiff(arg: unknown): Promise<void> {
+    const service = getServiceFromArg(arg);
     const filePath = getFilePathFromArg(arg);
+
     if (!filePath) return;
 
-    const absolutePath = toAbsolutePath(filePath);
+    const repoPath = service?.repository.path || getRepoPathFromArg(arg) || getWorkspaceRoot();
+    if (!repoPath) return;
+
+    const absolutePath = getAbsolutePathFromRepo(filePath, repoPath);
     const workingUri = vscode.Uri.file(absolutePath);
 
     const fileStatus = getFileStatusFromArg(arg);
@@ -605,7 +834,7 @@ async function openDiff(arg: unknown): Promise<void> {
         return;
     }
 
-    const headUri = createGitUri(filePath, 'HEAD');
+    const headUri = createGitUri(filePath, 'HEAD', repoPath);
 
     try {
         await vscode.commands.executeCommand(
@@ -621,6 +850,7 @@ async function openDiff(arg: unknown): Promise<void> {
 }
 
 async function previewShelved(arg: unknown): Promise<void> {
+    const service = getServiceFromArg(arg);
     const { shelvedFile, changelistId } = getShelvedFileInfoFromArg(arg);
 
     if (!shelvedFile || !changelistId) {
@@ -633,15 +863,18 @@ async function previewShelved(arg: unknown): Promise<void> {
         return;
     }
 
+    const repoPath = shelvedFile.repoPath || service?.repository.path || getRepoPathFromArg(arg);
+
     // Create URIs for diff view
     // Left side: HEAD version (original)
     // Right side: Snapshot version (saved)
-    const headUri = createGitUri(shelvedFile.relativePath, 'HEAD');
+    const headUri = createGitUri(shelvedFile.relativePath, 'HEAD', repoPath);
     const snapshotUri = createSnapshotUri(
         shelvedFile.relativePath,
         changelistId,
         shelvedFile.originalContent,
-        shelvedFile.shelvedAt
+        shelvedFile.shelvedAt,
+        repoPath
     );
 
     const fileName = path.basename(shelvedFile.relativePath);
@@ -667,9 +900,11 @@ async function previewShelved(arg: unknown): Promise<void> {
     }
 }
 
-async function revertFile(service: ChangelistService, arg: unknown): Promise<void> {
+async function revertFile(arg: unknown): Promise<void> {
+    const service = getServiceFromArg(arg);
     const filePath = getFilePathFromArg(arg);
-    if (!filePath) {
+
+    if (!service || !filePath) {
         showWarning('No file selected');
         return;
     }
@@ -692,15 +927,11 @@ async function revertFile(service: ChangelistService, arg: unknown): Promise<voi
 
 // ========== Chat Integration ==========
 
-/**
- * Add a snapshot to VS Code Chat (Copilot, etc.)
- * If saveSnapshotsToFile is enabled, uses the file from .smartchangelists/
- * Otherwise, creates a temporary file or uses the snapshot content directly
- */
-async function addToChat(service: ChangelistService, arg: unknown): Promise<void> {
+async function addToChat(arg: unknown): Promise<void> {
+    const service = getServiceFromArg(arg);
     const { shelvedFile, changelistId } = getShelvedFileInfoFromArg(arg);
 
-    if (!shelvedFile || !changelistId) {
+    if (!service || !shelvedFile || !changelistId) {
         showWarning('No snapshot selected');
         return;
     }
@@ -725,8 +956,7 @@ async function addToChat(service: ChangelistService, arg: unknown): Promise<void
         }
     } else {
         // Create a temporary file for the snapshot
-        const workspaceRoot = getWorkspaceRoot()!;
-        const tempDir = path.join(workspaceRoot, '.smartchangelists', '.temp');
+        const tempDir = path.join(service.repository.path, '.smartchangelists', '.temp');
         if (!fs.existsSync(tempDir)) {
             fs.mkdirSync(tempDir, { recursive: true });
         }
@@ -746,7 +976,6 @@ async function addToChat(service: ChangelistService, arg: unknown): Promise<void
 
     try {
         // Try to use VS Code's chat API to add the file as context
-        // This works with GitHub Copilot Chat and other chat extensions
         await vscode.commands.executeCommand('workbench.action.chat.attachFile', snapshotUri);
         showInfo(`Added snapshot to chat: ${path.basename(shelvedFile.relativePath)}`);
     } catch {
@@ -756,17 +985,19 @@ async function addToChat(service: ChangelistService, arg: unknown): Promise<void
     }
 }
 
-/**
- * Add a working file to VS Code Chat
- */
 async function addWorkingFileToChat(arg: unknown): Promise<void> {
+    const service = getServiceFromArg(arg);
     const filePath = getFilePathFromArg(arg);
+
     if (!filePath) {
         showWarning('No file selected');
         return;
     }
 
-    const absolutePath = toAbsolutePath(filePath);
+    const repoPath = service?.repository.path || getWorkspaceRoot();
+    if (!repoPath) return;
+
+    const absolutePath = getAbsolutePathFromRepo(filePath, repoPath);
     const fileUri = vscode.Uri.file(absolutePath);
 
     try {
@@ -780,19 +1011,17 @@ async function addWorkingFileToChat(arg: unknown): Promise<void> {
 
 // ========== Version Comparison ==========
 
-/**
- * Compare a snapshot with another version (HEAD, Working, or other snapshot)
- */
-async function compareWith(service: ChangelistService, arg: unknown): Promise<void> {
+async function compareWith(arg: unknown): Promise<void> {
     const config = getConfig();
     if (!config.enableVersionComparison) {
         showWarning('Version comparison is disabled. Enable it in settings: smartChangelists.enableVersionComparison');
         return;
     }
 
+    const service = getServiceFromArg(arg);
     const { shelvedFile, changelistId } = getShelvedFileInfoFromArg(arg);
 
-    if (!shelvedFile || !changelistId) {
+    if (!service || !shelvedFile || !changelistId) {
         showWarning('No snapshot selected');
         return;
     }
@@ -802,6 +1031,8 @@ async function compareWith(service: ChangelistService, arg: unknown): Promise<vo
         showError('Changelist not found');
         return;
     }
+
+    const repoPath = service.repository.path;
 
     // Get all versions of this file
     const allVersions = service.getFileVersions(shelvedFile.relativePath);
@@ -817,7 +1048,7 @@ async function compareWith(service: ChangelistService, arg: unknown): Promise<vo
     });
 
     // Add Working option (if file exists)
-    const workingPath = toAbsolutePath(shelvedFile.relativePath);
+    const workingPath = getAbsolutePathFromRepo(shelvedFile.relativePath, repoPath);
     if (fs.existsSync(workingPath)) {
         items.push({
             label: '$(file) Working',
@@ -860,14 +1091,15 @@ async function compareWith(service: ChangelistService, arg: unknown): Promise<vo
         shelvedFile.relativePath,
         changelistId,
         shelvedFile.originalContent || '',
-        shelvedFile.shelvedAt
+        shelvedFile.shelvedAt,
+        repoPath
     );
 
     let leftUri: vscode.Uri;
     let leftLabel: string;
 
     if (selected.type === 'head') {
-        leftUri = createGitUri(shelvedFile.relativePath, 'HEAD');
+        leftUri = createGitUri(shelvedFile.relativePath, 'HEAD', repoPath);
         leftLabel = 'HEAD';
     } else if (selected.type === 'working') {
         leftUri = vscode.Uri.file(workingPath);
@@ -877,7 +1109,8 @@ async function compareWith(service: ChangelistService, arg: unknown): Promise<vo
             selected.version.shelvedFile.relativePath,
             selected.version.changelist.id,
             selected.version.shelvedFile.originalContent || '',
-            selected.version.timestamp
+            selected.version.timestamp,
+            repoPath
         );
         leftLabel = selected.version.label;
     } else {
@@ -898,22 +1131,22 @@ async function compareWith(service: ChangelistService, arg: unknown): Promise<vo
     }
 }
 
-/**
- * Compare all versions of a file (opens WebView panel)
- */
-async function compareAllVersions(service: ChangelistService, arg: unknown): Promise<void> {
+async function compareAllVersions(arg: unknown): Promise<void> {
     const config = getConfig();
     if (!config.enableVersionComparison) {
         showWarning('Version comparison is disabled. Enable it in settings: smartChangelists.enableVersionComparison');
         return;
     }
 
+    const service = getServiceFromArg(arg);
     const { shelvedFile } = getShelvedFileInfoFromArg(arg);
 
-    if (!shelvedFile) {
+    if (!service || !shelvedFile) {
         showWarning('No snapshot selected');
         return;
     }
+
+    const repoPath = service.repository.path;
 
     // Get all versions of this file
     const allVersions = service.getFileVersions(shelvedFile.relativePath);
@@ -922,9 +1155,6 @@ async function compareAllVersions(service: ChangelistService, arg: unknown): Pro
         showInfo('Only one version exists. Use "Compare with..." to compare with HEAD or Working.');
         return;
     }
-
-    // For now, show a QuickPick to select two versions to compare
-    // TODO: In Phase 3, replace with WebView panel
 
     const items = allVersions.map((v, index) => ({
         label: `${index + 1}. ${v.label}`,
@@ -950,14 +1180,16 @@ async function compareAllVersions(service: ChangelistService, arg: unknown): Pro
         first.version.shelvedFile.relativePath,
         first.version.changelist.id,
         first.version.shelvedFile.originalContent || '',
-        first.version.timestamp
+        first.version.timestamp,
+        repoPath
     );
 
     const secondUri = createSnapshotUri(
         second.version.shelvedFile.relativePath,
         second.version.changelist.id,
         second.version.shelvedFile.originalContent || '',
-        second.version.timestamp
+        second.version.timestamp,
+        repoPath
     );
 
     const fileName = path.basename(shelvedFile.relativePath);
@@ -976,18 +1208,31 @@ async function compareAllVersions(service: ChangelistService, arg: unknown): Pro
 
 // ========== Other Operations ==========
 
-async function refreshAll(service: ChangelistService): Promise<void> {
-    await service.refresh();
-    log('Refreshed changelists');
+async function refreshAll(): Promise<void> {
+    await refreshAllServices();
+    treeProvider?.refresh();
+    log('Refreshed all changelists');
 }
 
-async function exportChangelists(service: ChangelistService): Promise<void> {
-    const exportData = service.exportChangelists();
+async function exportChangelists(): Promise<void> {
+    // Combine exports from all services
+    const allChangelists: Array<{ label: string; shelvedFiles: ShelvedFile[] }> = [];
 
-    if (exportData.changelists.length === 0) {
+    for (const service of services.values()) {
+        const exportData = service.exportChangelists();
+        allChangelists.push(...exportData.changelists);
+    }
+
+    if (allChangelists.length === 0) {
         showWarning('No changelists with shelved files to export');
         return;
     }
+
+    const exportData: ChangelistExport = {
+        version: 2,
+        changelists: allChangelists,
+        exportedAt: new Date().toISOString()
+    };
 
     const uri = await vscode.window.showSaveDialog({
         defaultUri: vscode.Uri.file('changelists.json'),
@@ -998,11 +1243,27 @@ async function exportChangelists(service: ChangelistService): Promise<void> {
     if (uri) {
         const content = JSON.stringify(exportData, null, 2);
         await vscode.workspace.fs.writeFile(uri, Buffer.from(content, 'utf8'));
-        showInfo(`Exported ${exportData.changelists.length} changelist(s)`);
+        showInfo(`Exported ${allChangelists.length} changelist(s)`);
     }
 }
 
-async function importChangelists(service: ChangelistService): Promise<void> {
+async function importChangelists(): Promise<void> {
+    // Select which repo to import into
+    let service: ChangelistService | undefined;
+
+    if (services.size === 1) {
+        service = services.values().next().value;
+    } else if (services.size > 1) {
+        const selected = await selectRepository('Import changelists to which repository?');
+        if (!selected) return;
+        service = services.get(selected.path);
+    }
+
+    if (!service) {
+        showWarning('No git repository available');
+        return;
+    }
+
     const uris = await vscode.window.showOpenDialog({
         canSelectMany: false,
         filters: { 'JSON': ['json'] },
@@ -1023,6 +1284,43 @@ async function importChangelists(service: ChangelistService): Promise<void> {
 }
 
 // ========== Helper Functions ==========
+
+async function selectRepository(placeholder: string): Promise<GitRepository | undefined> {
+    const items = Array.from(services.values()).map(s => ({
+        label: s.repository.name,
+        description: s.repository.path,
+        repo: s.repository
+    }));
+
+    const selected = await vscode.window.showQuickPick(items, { placeHolder: placeholder });
+    return selected?.repo;
+}
+
+async function selectChangelistFromAllRepos(placeholder: string): Promise<{ selectedService?: ChangelistService; selectedChangelist?: { id: string } }> {
+    const items: Array<{ label: string; description?: string; service: ChangelistService; id: string }> = [];
+
+    for (const service of services.values()) {
+        const changelists = service.getChangelists().filter(cl => !cl.isDefault);
+        for (const cl of changelists) {
+            items.push({
+                label: cl.label,
+                description: services.size > 1 ? service.repository.name : undefined,
+                service,
+                id: cl.id
+            });
+        }
+    }
+
+    if (items.length === 0) {
+        showWarning('No custom changelists available');
+        return {};
+    }
+
+    const selected = await vscode.window.showQuickPick(items, { placeHolder: placeholder });
+    if (!selected) return {};
+
+    return { selectedService: selected.service, selectedChangelist: { id: selected.id } };
+}
 
 function getChangelistIdFromArg(arg: unknown): string | undefined {
     if (!arg) return undefined;
@@ -1060,19 +1358,20 @@ function getFilePathFromArg(arg: unknown): string | undefined {
             if (shelvedFile.relativePath) return shelvedFile.relativePath;
         }
 
-        if (obj.resourceUri && typeof obj.resourceUri === 'object') {
-            const uri = obj.resourceUri as { fsPath?: string };
-            if (uri.fsPath) {
-                const workspaceRoot = getWorkspaceRoot();
-                if (workspaceRoot) {
-                    return path.relative(workspaceRoot, uri.fsPath).replace(/\\/g, '/');
-                }
-            }
-        }
-
         if (obj.relativePath && typeof obj.relativePath === 'string') {
             return obj.relativePath;
         }
+    }
+
+    return undefined;
+}
+
+function getRepoPathFromArg(arg: unknown): string | undefined {
+    if (!arg || typeof arg !== 'object') return undefined;
+
+    const obj = arg as Record<string, unknown>;
+    if (obj.repoPath && typeof obj.repoPath === 'string') {
+        return obj.repoPath;
     }
 
     return undefined;
