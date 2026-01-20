@@ -17,6 +17,9 @@
 - **URI handling updated** - Git content provider now includes repository path for proper multi-repo diff support
 - **Automatic migration** - Legacy single-repo state is automatically migrated to new format
 
+### Fixed
+- **Shelve from Command Palette** - "Shelve to Changelist" now works from command palette using active editor's file
+
 ### Technical
 - State version bumped to 4
 - New activation event: `onView:smartChangelistsView`

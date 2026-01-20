@@ -484,6 +484,21 @@ async function shelveFile(arg: unknown, additionalArgs: unknown[]): Promise<void
         (additionalArgs[0] as unknown[]).forEach(extractFile);
     }
 
+    // If no files from args, try to use active text editor (for command palette usage)
+    if (files.length === 0 && vscode.window.activeTextEditor) {
+        const activeDoc = vscode.window.activeTextEditor.document;
+        if (!activeDoc.isUntitled && repoManager) {
+            const repo = repoManager.getRepositoryForFile(activeDoc.uri.fsPath);
+            if (repo) {
+                const relativePath = path.relative(repo.path, activeDoc.uri.fsPath).replace(/\\/g, '/');
+                files.push(relativePath);
+                if (!repoPath) {
+                    repoPath = repo.path;
+                }
+            }
+        }
+    }
+
     // Get the service for this repo
     const targetService = repoPath ? services.get(repoPath) : service;
 
