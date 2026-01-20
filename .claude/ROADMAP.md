@@ -32,6 +32,20 @@
 - [x] Multi-platform testing
 - [x] Auto release on tag
 
+### v1.2.0
+- [x] Multi-select delete for snapshots
+- [x] New icon designs
+
+### v2.0.0 (Major Release)
+- [x] Multi-root workspace support
+- [x] Nested git repos / submodule detection
+- [x] Activity Bar always visible (even without git)
+- [x] Repository-specific state management
+- [x] Hierarchical TreeView for multiple repos
+- [x] RepositoryManager class
+- [x] Automatic state migration from v1.x
+- [x] State version 4
+
 ---
 
 ## Pending / Future
@@ -112,6 +126,167 @@ export async function showWhatsNew(context: vscode.ExtensionContext) {
 ```
 
 Call from `activate()` in extension.ts.
+
+---
+
+## Extended Git Features (Future Vision)
+
+> **Amaç**: GitLens ve Interactive Git Log gibi eklentilerin popüler özelliklerini ücretsiz ve hafif bir pakette sunmak.
+
+### Motivasyon
+- GitLens'in çoğu gelişmiş özelliği Pro (ücretli)
+- Kullanıcılar tek eklentiyle birçok iş görebilmeli
+- Changelist + blame + log birbirini tamamlayan özellikler
+
+### Kapsam Değişikliği
+Eğer bu özellikler eklenirse:
+- Eklenti ismi değişebilir: "Git Toolkit", "Git Plus", "Git Suite" vb.
+- Marketplace açıklaması ve kategorileri güncellenecek
+
+---
+
+### Feature 1: Inline Blame (GitLens tarzı)
+
+**Açıklama**: Editörde aktif satırın son değişiklik bilgisini gösterir.
+
+**Görünüm**:
+```
+const x = 5;  // 👤 John Doe • 3 days ago • Fix calculation bug (a1b2c3d)
+```
+
+**Teknik Detaylar**:
+- `git blame` komutu ile satır bazlı bilgi
+- `TextEditorDecorationType` ile inline decoration
+- Hover'da detaylı bilgi (full commit message, diff preview)
+- Toggle komutu ile açma/kapama
+- Performans: Lazy loading, cache mekanizması
+
+**Ayarlar**:
+```json
+{
+  "smartChangelists.inlineBlame.enabled": true,
+  "smartChangelists.inlineBlame.format": "${author} • ${date} • ${message}",
+  "smartChangelists.inlineBlame.dateFormat": "relative"
+}
+```
+
+**Komutlar**:
+- `Toggle Inline Blame`
+- `Copy Commit Hash`
+- `Show Commit Details`
+
+---
+
+### Feature 2: Interactive Git Log
+
+**Açıklama**: Git geçmişini görsel olarak gezme, commit detaylarını inceleme.
+
+**Uygulama Seçenekleri**:
+
+#### Seçenek A: TreeView tabanlı
+- Activity Bar'da yeni panel veya mevcut panele tab
+- Commit listesi → dosya listesi → diff görüntüleme
+- Hafif, native VS Code deneyimi
+
+#### Seçenek B: WebView tabanlı
+- Zengin görsel deneyim (graph, branch visualization)
+- Daha fazla geliştirme eforu
+- Git Graph eklentisi benzeri
+
+**Önerilen**: TreeView ile başla, gerekirse WebView ekle.
+
+**Özellikler**:
+- [ ] Commit listesi (pagination ile)
+- [ ] Branch/tag filtreleme
+- [ ] Commit detayları (mesaj, yazar, tarih, hash)
+- [ ] Commit'teki değişen dosyalar
+- [ ] Dosya diff görüntüleme
+- [ ] Commit'e checkout/reset (dikkatli!)
+- [ ] Cherry-pick desteği
+- [ ] Search/filter commits
+
+**TreeView Yapısı**:
+```
+📁 GIT LOG
+├── 📌 HEAD (main)
+│   ├── 🔵 a1b2c3d - Fix login bug (John, 2 hours ago)
+│   │   ├── 📄 src/auth.ts (+15, -3)
+│   │   └── 📄 src/utils.ts (+2, -1)
+│   ├── 🔵 d4e5f6g - Add user profile (Jane, 1 day ago)
+│   └── ...
+├── 🏷️ Tags
+│   ├── v1.2.0
+│   └── v1.1.0
+└── 🌿 Branches
+    ├── main
+    ├── develop
+    └── feature/xyz
+```
+
+---
+
+### Feature 3: Commit Diff Viewer
+
+**Açıklama**: Herhangi bir commit'in tüm değişikliklerini tek ekranda görme.
+
+**Özellikler**:
+- Commit seçimi (hash, branch, tag)
+- Değişen dosyaların listesi
+- Side-by-side veya inline diff
+- Dosyalar arası gezinme
+
+---
+
+### Feature 4: Branch Karşılaştırma
+
+**Açıklama**: İki branch arasındaki farkları listeleme.
+
+**Özellikler**:
+- Branch seçici (source → target)
+- Farklı dosyaların listesi
+- Her dosya için diff
+- Merge conflict tahmini
+
+---
+
+### Uygulama Önceliği
+
+| Sıra | Özellik | Zorluk | Etki |
+|------|---------|--------|------|
+| 1 | Inline Blame | Orta | Yüksek |
+| 2 | Interactive Git Log (TreeView) | Orta | Yüksek |
+| 3 | Commit Diff Viewer | Düşük | Orta |
+| 4 | Branch Karşılaştırma | Orta | Orta |
+| 5 | Interactive Git Log (WebView) | Yüksek | Yüksek |
+
+---
+
+### Teknik Notlar
+
+**Git Komutları**:
+```bash
+# Inline blame
+git blame -L <line>,<line> --porcelain <file>
+
+# Commit log
+git log --oneline --graph --all -n 50
+
+# Commit details
+git show --stat <hash>
+
+# Commit diff
+git diff <hash>^ <hash>
+
+# Branch comparison
+git diff <branch1>..<branch2> --stat
+```
+
+**VS Code API'leri**:
+- `TextEditorDecorationType` - inline decorations
+- `TreeDataProvider` - git log tree
+- `WebviewPanel` - rich UI (optional)
+- `Diff` - native diff viewer
+- `SourceControl` API - git integration
 
 ---
 

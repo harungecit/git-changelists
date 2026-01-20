@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.0.0] - 2026-01-20
+
+### Added
+
+**Multi-Git Repository Support** (Major Feature)
+- **Multi-root workspace support** - Each workspace folder with its own git repository is now handled independently
+- **Nested repositories / Submodules** - Automatically discovers and manages nested git repos and submodules
+- **Always-visible Activity Bar** - Extension panel is always visible, even without a git repository (shows "No Git Repository" message)
+- **Repository-specific state** - Each repository maintains its own changelists and snapshots
+- **Repository hierarchy in TreeView** - When multiple repos exist, shows hierarchical view with repos at root level; single repo maintains flat view for backward compatibility
+
+### Changed
+- **New RepositoryManager** - Centralized management of all git repositories in workspace
+- **State key per repository** - Uses unique hash-based keys for storing each repo's state
+- **URI handling updated** - Git content provider now includes repository path for proper multi-repo diff support
+- **Automatic migration** - Legacy single-repo state is automatically migrated to new format
+
+### Technical
+- State version bumped to 4
+- New activation event: `onView:smartChangelistsView`
+- View `when` condition removed for always-visible panel
+
+### Migration Notes
+- Existing changelists will be automatically migrated to the new format
+- No action required from users - migration happens on first load
+
+---
+
 ## [1.2.0] - 2025-12-30
 
 ### Added
